@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Strida</string>
+    <string name="title_activity_main">Strida</string>
+    <string name="package_name">com.strida.app</string>
+    <string name="custom_url_scheme">com.strida.app</string>
+</resources>

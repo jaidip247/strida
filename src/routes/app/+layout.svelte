@@ -1,7 +1,9 @@
 <!-- Shared layout for all app routes with sidebar navigation -->
 <script>
-	import { Calendar, Plus, BarChart, Brain, User } from "@lucide/svelte";
+	import { Calendar, Plus, BarChart, Brain, User, LogOut } from "@lucide/svelte";
 	import { page } from "$app/stores";
+	import { goto } from "$app/navigation";
+	import { createClient } from "$lib/supabase/client";
 	
 	const navItems = [
 		{ href: "/app", icon: Calendar, label: "Today", exact: true },
@@ -10,6 +12,16 @@
 		{ href: "/app/insights", icon: Brain, label: "Insights" },
 		{ href: "/app/profile", icon: User, label: "Profile" }
 	];
+
+	const supabase = createClient();
+	let loggingOut = false;
+
+	async function handleLogout() {
+		loggingOut = true;
+		await supabase.auth.signOut();
+		await goto("/login");
+		loggingOut = false;
+	}
 </script>
 
 <div class="app-layout">
@@ -24,6 +36,12 @@
 				</a>
 			{/each}
 		</nav>
+		<div class="desktop-logout">
+			<button class="logout-button" onclick={handleLogout} disabled={loggingOut}>
+				<LogOut size={18} />
+				<span>{loggingOut ? "Logging out..." : "Log out"}</span>
+			</button>
+		</div>
 	</div>
 
 	<div class="main-content">
@@ -39,6 +57,10 @@
 				<span>{item.label.split(' ')[0]}</span>
 			</a>
 		{/each}
+		<button class="nav-button" onclick={handleLogout} disabled={loggingOut}>
+			<LogOut size={20} />
+			<span>{loggingOut ? "..." : "Logout"}</span>
+		</button>
 	</div>
 </div>
 
@@ -61,6 +83,9 @@
 		top: 0;
 		background-color: #fff;
 		border-right: 1px solid #e0e0e0;
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
 	}
 
 	.desktop-nav {
@@ -68,6 +93,35 @@
 		flex-direction: column;
 		gap: 0.5rem;
 		padding: 1rem 0.5rem;
+	}
+
+	.desktop-logout {
+		padding: 1rem 0.5rem;
+		border-top: 1px solid #e0e0e0;
+	}
+
+	.logout-button {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		width: 100%;
+		padding: 0.75rem 1rem;
+		background: none;
+		border: none;
+		border-radius: 0.5rem;
+		color: #666;
+		cursor: pointer;
+		transition: all 0.2s;
+	}
+
+	.logout-button:hover:enabled {
+		background-color: #f9f9f9;
+		color: #000;
+	}
+
+	.logout-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
 	}
 
 	.nav-link {

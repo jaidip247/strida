@@ -36,3 +36,29 @@ npm run build
 You can preview the production build with `npm run preview`.
 
 > To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+
+## Android app (Capacitor)
+
+This repo is now configured for Capacitor with an Android project in `android/`.
+
+Useful commands:
+
+```sh
+# sync web assets + plugins to Android project
+npm run cap:sync
+
+# full mobile prep flow (build static web assets then sync)
+npm run cap:prepare
+
+# open Android Studio project
+npm run cap:open
+```
+
+Build APK from Android Studio (recommended) or Gradle:
+
+```sh
+cd android
+./gradlew assembleDebug
+```
+
+The debug APK is generated under `android/app/build/outputs/apk/debug/`.
