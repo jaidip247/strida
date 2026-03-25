@@ -1,10 +1,11 @@
 import { redirect } from '@sveltejs/kit';
 
-export async function load({ locals }) {
+export async function load({ locals, url }) {
 	const session = await locals.getSession();
 
 	if (!session) {
-		throw redirect(303, '/login');
+		const next = `${url.pathname}${url.search}`;
+		throw redirect(303, `/login?next=${encodeURIComponent(next)}`);
 	}
 
 	return { session };

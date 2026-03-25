@@ -1,5 +1,4 @@
 <script>
-	import { Plus } from "@lucide/svelte";
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -214,28 +213,31 @@
 	}
 </script>
 
-<div class="page-container">
-	<div class="page-header">
-		<Plus size={24} />
-		<h1>Add New Habit</h1>
-	</div>
-	
-	<div class="page-content">
+<div class="page-shell">
+	<div class="page-container">
+		<div class="page-header">
+			<div>
+				<p class="eyebrow">New habit</p>
+				<h1>Add Habit</h1>
+			</div>
+		</div>
+		
+		<div class="page-content">
 		{#if loading}
 			<div class="loading-state">
 				<p>Loading...</p>
 			</div>
 		{:else if error && !loading && error.includes('Not authenticated')}
-			<Card.Root class="mb-4">
+			<Card.Root class="surface-card mb-4 border-0 shadow-none">
 				<Card.Content class="pt-6">
 					<div class="text-red-600 text-sm mb-4">{error}</div>
-					<Button onclick={() => goto('/login')} class="" disabled={false}>
+					<Button onclick={() => goto('/login?next=/app/add')} class="" disabled={false}>
 						Go to Login
 					</Button>
 				</Card.Content>
 			</Card.Root>
 		{:else}
-			<Card.Root class="">
+			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Header class="">
 					<Card.Title class="">Create a New Habit</Card.Title>
 					<Card.Description class="">Fill in the details to create a new habit to track.</Card.Description>
@@ -350,34 +352,53 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+		</div>
 	</div>
 </div>
 
 <style>
+	.page-shell {
+		display: block;
+	}
+
 	.page-container {
 		padding: 2rem;
 		max-width: 800px;
-		margin: 0 auto;
+		margin: 0;
 	}
 
 	.page-header {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 2rem;
+		margin-bottom: 1.4rem;
+	}
+
+	.eyebrow {
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-soft);
+		margin-bottom: 0.35rem;
 	}
 
 	.page-header h1 {
-		font-size: 1.875rem;
-		font-weight: 600;
+		font-size: 1.6rem;
+		font-weight: 640;
+		letter-spacing: -0.02em;
 	}
 
 	.page-content {
-		color: #666;
+		color: var(--ink-soft);
 	}
 
 	.loading-state {
 		text-align: center;
 		padding: 2rem;
+	}
+
+	@media (max-width: 768px) {
+		.page-container {
+			padding: 1rem;
+		}
 	}
 </style>

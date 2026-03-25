@@ -1,29 +1,27 @@
 <script>
-	import { User } from "@lucide/svelte";
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { createClient } from '$lib/supabase/client';
 	import { onMount } from 'svelte';
 
 	const supabase = createClient();
 
-	let loading = false;
-	let saving = false;
-	let error = '';
-	let success = false;
+	let loading = $state(false);
+	let saving = $state(false);
+	let error = $state('');
+	let success = $state(false);
 	
-	let profile = {
+	let profile = $state({
 		name: '',
 		email: '',
 		avatar_url: ''
-	};
+	});
 	
-	let googleProfile = null;
+	let googleProfile = $state(null);
 
-	let user = null;
+	let user = $state(null);
 
 	onMount(async () => {
 		await loadProfile();
@@ -197,25 +195,28 @@
 	}
 </script>
 
-<div class="page-container">
-	<div class="page-header">
-		<User size={24} />
-		<h1>Profile</h1>
-	</div>
-	
-	<div class="page-content">
+<div class="page-shell">
+	<div class="page-container">
+		<div class="page-header">
+			<div>
+				<p class="eyebrow">Account</p>
+				<h1>Profile</h1>
+			</div>
+		</div>
+		
+		<div class="page-content">
 		{#if loading}
 			<div class="loading-state">
 				<p>Loading profile...</p>
 			</div>
 		{:else if error && !loading}
-			<Card.Root class="mb-4">
+			<Card.Root class="surface-card mb-4 border-0 shadow-none">
 				<Card.Content class="pt-6">
 					<div class="text-red-600 text-sm">{error}</div>
 				</Card.Content>
 			</Card.Root>
 		{:else}
-			<Card.Root class="">
+			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Header class="">
 					<Card.Title class="">Profile Information</Card.Title>
 					<Card.Description class="">Update your profile information. Changes will be saved to your account.</Card.Description>
@@ -232,7 +233,7 @@
 						</div>
 					{/if}
 					
-					<form on:submit={handleSubmit}>
+					<form onsubmit={handleSubmit}>
 						<div class="flex flex-col gap-6">
 							{#if profile.avatar_url || googleProfile?.avatar_url}
 								<div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -303,34 +304,53 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+		</div>
 	</div>
 </div>
 
 <style>
+	.page-shell {
+		display: block;
+	}
+
 	.page-container {
 		padding: 2rem;
 		max-width: 800px;
-		margin: 0 auto;
+		margin: 0;
 	}
 
 	.page-header {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 2rem;
+		margin-bottom: 1.4rem;
+	}
+
+	.eyebrow {
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-soft);
+		margin-bottom: 0.35rem;
 	}
 
 	.page-header h1 {
-		font-size: 1.875rem;
-		font-weight: 600;
+		font-size: 1.6rem;
+		font-weight: 640;
+		letter-spacing: -0.02em;
 	}
 
 	.page-content {
-		color: #666;
+		color: var(--ink-soft);
 	}
 
 	.loading-state {
 		text-align: center;
 		padding: 2rem;
+	}
+
+	@media (max-width: 768px) {
+		.page-container {
+			padding: 1rem;
+		}
 	}
 </style>

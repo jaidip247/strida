@@ -6,6 +6,7 @@
 	import { createClient } from '$lib/supabase/client';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import AuthFrame from '$lib/components/AuthFrame.svelte';
 
 	const supabase = createClient();
 
@@ -59,13 +60,11 @@
 	}
 </script>
 
-<div class="container mx-auto p-10 flex justify-center items-center h-screen">
-	<Card.Root class="w-full max-w-sm">
-		<Card.Header class="">
-			<Card.Title class="">Reset password</Card.Title>
-			<Card.Description class="">Enter your new password</Card.Description>
-			
-		</Card.Header>
+<AuthFrame
+	title="Choose a new password"
+	description="Keep it secure and easy to remember."
+>
+	<Card.Root class="surface-card w-full max-w-sm border-0 shadow-none">
 		<Card.Content class="">
 			{#if error}
 				<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
@@ -73,7 +72,7 @@
 				</div>
 			{/if}
 			{#if success}
-				<div class="mb-4 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-700">
+				<div class="mb-4 rounded-md border p-3 text-sm pop-surface">
 					{success}
 				</div>
 			{/if}
@@ -100,9 +99,9 @@
 		<Card.Footer class="flex-col gap-2">
       <Card.Action class="">
         <p class="text-sm text-gray-500">
-				<a href="/login" class="text-blue-500 underline underline-offset-4 hover:underline font-medium">Back to login</a>
+				<a href="/login" class="pop-link underline underline-offset-4 hover:underline font-medium">Back to login</a>
         </p>
 			</Card.Action>
 		</Card.Footer>
 	</Card.Root>
-</div>
+</AuthFrame>

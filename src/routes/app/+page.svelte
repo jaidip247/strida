@@ -217,25 +217,29 @@
 	});
 </script>
 
-<div class="page-container">
-	<div class="page-header">
-		<CalendarIcon size={24} />
-		<h1>Today's Habits</h1>
-	</div>
-	
-	<div class="page-content">
+<div class="page-shell">
+	<div class="page-container">
+		<div class="page-header">
+			<div>
+				<p class="eyebrow">Daily ledger</p>
+				<h1>Today's Habits</h1>
+			</div>
+			<div class="metric stat">{Object.values(completions).filter(Boolean).length}/{todayHabits.length || 0}</div>
+		</div>
+		
+		<div class="page-content">
 		{#if loading}
 			<div class="loading-state">
 				<p>Loading...</p>
 			</div>
 		{:else if loadError}
-			<Card.Root>
+			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Content class="pt-6">
 					<div class="text-red-600 text-sm">{loadError}</div>
 				</Card.Content>
 			</Card.Root>
 		{:else if todayHabits.length === 0}
-			<Card.Root>
+			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Content class="pt-6">
 					<div class="text-center py-8 text-muted-foreground">
 						<p>No habits scheduled for today.</p>
@@ -244,9 +248,9 @@
 				</Card.Content>
 			</Card.Root>
 		{:else}
-			<Card.Root>
+			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Header>
-					<Card.Title>Today's Habits Checklist</Card.Title>
+					<Card.Title>Today&apos;s checklist</Card.Title>
 					<Card.Description>
 						{todayHabits.length} {todayHabits.length === 1 ? 'habit' : 'habits'} to track today
 					</Card.Description>
@@ -254,7 +258,7 @@
 				<Card.Content>
 					<div class="space-y-3">
 						{#each todayHabits as habit}
-							<div class="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+							<div class="habit-row">
 								<Checkbox
 									id="habit-{habit.id}"
 									checked={completions[habit.id] || false}
@@ -267,7 +271,7 @@
 									{/if}
 								</label>
 								{#if completions[habit.id]}
-									<CheckCircle2 class="h-5 w-5 text-green-600" />
+									<CheckCircle2 class="h-5 w-5 text-black ink-settle" />
 								{/if}
 							</div>
 						{/each}
@@ -275,34 +279,77 @@
 				</Card.Content>
 			</Card.Root>
 		{/if}
+		</div>
 	</div>
 </div>
 
 <style>
+	.page-shell {
+		display: block;
+	}
+
 	.page-container {
 		padding: 2rem;
 		max-width: 800px;
-		margin: 0 auto;
+		margin: 0;
 	}
 
 	.page-header {
 		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 2rem;
+		align-items: end;
+		justify-content: space-between;
+		margin-bottom: 1.4rem;
+	}
+
+	.eyebrow {
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-soft);
+		margin-bottom: 0.35rem;
 	}
 
 	.page-header h1 {
-		font-size: 1.875rem;
-		font-weight: 600;
+		font-size: 1.6rem;
+		font-weight: 640;
+		letter-spacing: -0.02em;
+	}
+
+	.stat {
+		font-size: 1rem;
+		color: var(--ink-soft);
+		border: 1px solid var(--line-strong);
+		padding: 0.3rem 0.55rem;
+		border-radius: 8px;
 	}
 
 	.page-content {
-		color: #666;
+		color: var(--ink-soft);
 	}
 
 	.loading-state {
 		text-align: center;
 		padding: 2rem;
+	}
+
+	.habit-row {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.7rem 0.75rem;
+		border-radius: 10px;
+		border: 1px solid var(--line);
+		background: white;
+		transition: border-color 120ms ease;
+	}
+
+	.habit-row:hover {
+		border-color: var(--line-strong);
+	}
+
+	@media (max-width: 768px) {
+		.page-container {
+			padding: 1rem;
+		}
 	}
 </style>

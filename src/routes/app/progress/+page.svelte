@@ -1,5 +1,5 @@
 <script>
-	import { BarChart, ChevronDown } from "@lucide/svelte";
+	import { ChevronDown } from "@lucide/svelte";
 	import { createClient } from "$lib/supabase/client";
 	import { onMount } from "svelte";
 	import * as Card from "$lib/components/ui/card/index.js";
@@ -206,19 +206,22 @@
 	});
 </script>
 
-<div class="page-container">
-	<div class="page-header">
-		<BarChart size={24} />
-		<h1>Progress</h1>
-	</div>
+<div class="page-shell">
+	<div class="page-container">
+		<div class="page-header">
+			<div>
+				<p class="eyebrow">History</p>
+				<h1>Progress</h1>
+			</div>
+		</div>
 
-	<div class="page-content">
+		<div class="page-content">
 		{#if loading}
 			<div class="loading-state">
 				<p>Loading progress...</p>
 			</div>
 		{:else if error}
-			<Card.Root>
+			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Content class="pt-6">
 					<div class="text-red-600 text-sm">{error}</div>
 				</Card.Content>
@@ -233,7 +236,7 @@
 
 				<Tabs.Content value="upcoming" class="mt-4">
 					{#if upcomingHabits.length === 0}
-						<Card.Root><Card.Content class="pt-6 text-sm text-muted-foreground">No upcoming habits.</Card.Content></Card.Root>
+						<Card.Root class="surface-card border-0 shadow-none"><Card.Content class="pt-6 text-sm text-muted-foreground">No upcoming habits.</Card.Content></Card.Root>
 					{:else}
 						<div class="habit-list">
 							{#each upcomingHabits as habit}
@@ -286,7 +289,7 @@
 
 				<Tabs.Content value="ongoing" class="mt-4">
 					{#if ongoingHabits.length === 0}
-						<Card.Root><Card.Content class="pt-6 text-sm text-muted-foreground">No ongoing habits.</Card.Content></Card.Root>
+						<Card.Root class="surface-card border-0 shadow-none"><Card.Content class="pt-6 text-sm text-muted-foreground">No ongoing habits.</Card.Content></Card.Root>
 					{:else}
 						<div class="habit-list">
 							{#each ongoingHabits as habit}
@@ -339,7 +342,7 @@
 
 				<Tabs.Content value="completed" class="mt-4">
 					{#if completedHabits.length === 0}
-						<Card.Root><Card.Content class="pt-6 text-sm text-muted-foreground">No completed habits.</Card.Content></Card.Root>
+						<Card.Root class="surface-card border-0 shadow-none"><Card.Content class="pt-6 text-sm text-muted-foreground">No completed habits.</Card.Content></Card.Root>
 					{:else}
 						<div class="habit-list">
 							{#each completedHabits as habit}
@@ -391,26 +394,39 @@
 				</Tabs.Content>
 			</Tabs.Root>
 		{/if}
+		</div>
 	</div>
 </div>
 
 <style>
+	.page-shell {
+		display: block;
+	}
+
 	.page-container {
 		padding: 2rem;
 		max-width: 900px;
-		margin: 0 auto;
+		margin: 0;
 	}
 
 	.page-header {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 1.5rem;
+		margin-bottom: 1.4rem;
+	}
+
+	.eyebrow {
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-soft);
+		margin-bottom: 0.35rem;
 	}
 
 	.page-header h1 {
-		font-size: 1.875rem;
-		font-weight: 600;
+		font-size: 1.6rem;
+		font-weight: 640;
+		letter-spacing: -0.02em;
 	}
 
 	.loading-state {
@@ -425,9 +441,9 @@
 	}
 
 	.habit-item {
-		border: 1px solid #e5e7eb;
+		border: 1px solid var(--line-strong);
 		border-radius: 0.75rem;
-		background: white;
+		background: var(--paper-elevated);
 	}
 
 	.habit-item summary {
@@ -456,13 +472,13 @@
 
 	.habit-meta {
 		font-size: 0.8rem;
-		color: #6b7280;
+		color: var(--ink-soft);
 	}
 
 	.chevron-icon {
 		width: 1rem;
 		height: 1rem;
-		color: #64748b;
+		color: var(--ink-soft);
 		flex-shrink: 0;
 		transition: transform 180ms ease;
 	}
@@ -472,12 +488,12 @@
 	}
 
 	.habit-details {
-		border-top: 1px solid #f1f5f9;
+		border-top: 1px solid var(--line);
 		padding: 0.9rem 1rem 1rem;
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
-		background: linear-gradient(180deg, #fcfdff 0%, #f8fafc 100%);
+		background: var(--paper);
 	}
 
 	.stats-row {
@@ -487,7 +503,7 @@
 	}
 
 	.stat-pill {
-		border: 1px solid #e2e8f0;
+		border: 1px solid var(--line);
 		background: white;
 		border-radius: 0.6rem;
 		padding: 0.45rem 0.6rem;
@@ -498,26 +514,26 @@
 
 	.stat-label {
 		font-size: 0.72rem;
-		color: #64748b;
+		color: var(--ink-soft);
 	}
 
 	.stat-value {
 		font-size: 0.86rem;
 		font-weight: 600;
-		color: #0f172a;
+		color: var(--ink);
 	}
 
 	.progress-bar {
 		width: 100%;
 		height: 0.5rem;
 		border-radius: 999px;
-		background: #e2e8f0;
+		background: var(--line);
 		overflow: hidden;
 	}
 
 	.progress-fill {
 		height: 100%;
-		background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+		background: var(--ink);
 		border-radius: inherit;
 		transition: width 220ms ease;
 	}
@@ -537,26 +553,26 @@
 		gap: 0.05rem;
 		border-radius: 0.55rem;
 		padding: 0.4rem 0.25rem;
-		border: 1px solid #e5e7eb;
-		background: #f8fafc;
+		border: 1px solid var(--line);
+		background: #f9f9f7;
 	}
 
 	.day-cell.done {
-		background: #dcfce7;
-		border-color: #86efac;
-		color: #14532d;
+		background: #efefec;
+		border-color: var(--line-strong);
+		color: var(--ink);
 	}
 
 	.day-cell.missed {
-		background: #fee2e2;
-		border-color: #fca5a5;
-		color: #7f1d1d;
+		background: #f5f5f3;
+		border-color: var(--line);
+		color: var(--ink-soft);
 	}
 
 	.day-cell.future {
-		background: #f8fafc;
-		border-color: #e2e8f0;
-		color: #64748b;
+		background: #fcfcfa;
+		border-color: var(--line);
+		color: var(--ink-soft);
 	}
 
 	.day-number {
@@ -576,7 +592,7 @@
 		flex-wrap: wrap;
 		gap: 0.75rem;
 		font-size: 0.72rem;
-		color: #64748b;
+		color: var(--ink-soft);
 	}
 
 	.legend span {
@@ -594,15 +610,21 @@
 	}
 
 	.legend-dot.done {
-		background: #22c55e;
+		background: #242424;
 	}
 
 	.legend-dot.missed {
-		background: #ef4444;
+		background: #8c8c8c;
 	}
 
 	.legend-dot.future {
-		background: #cbd5e1;
+		background: #d2d2d2;
+	}
+
+	@media (max-width: 768px) {
+		.page-container {
+			padding: 1rem;
+		}
 	}
 
 	@media (max-width: 640px) {

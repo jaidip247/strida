@@ -8,7 +8,8 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
-	import { getCallbackUrl } from '$lib/utils/auth';
+	import { getOAuthRedirectUrl, sanitizeNextPath } from '$lib/utils/auth';
+	import AuthFrame from '$lib/components/AuthFrame.svelte';
 
 	const supabase = createClient();
 	
@@ -16,6 +17,10 @@
 	let password = '';
 	let loading = false;
 	let error = '';
+
+	function getNextPath() {
+		return sanitizeNextPath($page.url.searchParams.get('next'), '/app');
+	}
 	
 	// Check for error in URL query params
 	onMount(() => {
@@ -39,8 +44,7 @@
 			error = authError.message;
 			loading = false;
 		} else {
-			// Redirect to app
-			goto('/app');
+			goto(getNextPath());
 		}
 	}
 
@@ -51,7 +55,7 @@
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
-				redirectTo: getCallbackUrl('/app')
+				redirectTo: getOAuthRedirectUrl(getNextPath())
 			}
 		});
 
@@ -63,12 +67,11 @@
 	}
 </script>
 
-<div class="container mx-auto p-10 flex justify-center items-center h-screen">
-	<Card.Root class="w-full max-w-sm">
-		<Card.Header class="">
-			<Card.Title class="">Login to your account</Card.Title>
-			<Card.Description class="">Enter your email below to login to your account</Card.Description>
-		</Card.Header>
+<AuthFrame
+	title="Welcome back"
+	description="Sign in to continue your daily rhythm."
+>
+	<Card.Root class="surface-card w-full max-w-sm border-0 shadow-none">
 		<Card.Content class="">
 			{#if error}
 				<div class="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
@@ -92,7 +95,7 @@
 					<div class="grid gap-2">
 						<div class="flex items-center">
 							<Label for="password" class="">Password</Label>
-							<a href="/forgot-password" class="ms-auto inline-block text-sm underline-offset-4 text-blue-500 font-medium text-underline">
+							<a href={`/forgot-password?next=${encodeURIComponent(getNextPath())}`} class="ms-auto inline-block text-sm underline-offset-4 pop-link font-medium text-underline">
 								Forgot your password?
 							</a>
 						</div>
@@ -149,9 +152,9 @@
 			</Button>
 			<Card.Action class="">
 				<p class="text-sm text-gray-500">
-					Don't have an account? <a href="/register" class="text-blue-500 underline underline-offset-4 hover:underline font-medium">Sign Up</a>
+					Don't have an account? <a href={`/register?next=${encodeURIComponent(getNextPath())}`} class="pop-link underline underline-offset-4 hover:underline font-medium">Sign Up</a>
 				</p>
 			</Card.Action>
 		</Card.Footer>
 	</Card.Root>
-</div>
+</AuthFrame>

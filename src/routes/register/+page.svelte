@@ -6,7 +6,9 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { createClient } from '$lib/supabase/client';
 	import { goto } from '$app/navigation';
-	import { getCallbackUrl } from '$lib/utils/auth';
+	import { page } from '$app/stores';
+	import { getOAuthRedirectUrl, sanitizeNextPath } from '$lib/utils/auth';
+	import AuthFrame from '$lib/components/AuthFrame.svelte';
 
 	const supabase = createClient();
 	
@@ -14,6 +16,10 @@
 	let password = '';
 	let loading = false;
 	let error = '';
+
+	function getNextPath() {
+		return sanitizeNextPath($page.url.searchParams.get('next'), '/app');
+	}
 
 	async function handleEmailSignUp(e) {
 		e.preventDefault();
@@ -24,7 +30,7 @@
 			email,
 			password,
 			options: {
-				emailRedirectTo: getCallbackUrl('/app')
+				emailRedirectTo: getOAuthRedirectUrl(getNextPath())
 			}
 		});
 
@@ -37,8 +43,7 @@
 				error = 'Please check your email to confirm your account before signing in.';
 				loading = false;
 			} else if (data.session) {
-				// Auto-logged in, redirect to app
-				goto('/app');
+				goto(getNextPath());
 			}
 		}
 	}
@@ -50,7 +55,7 @@
 		const { error: authError } = await supabase.auth.signInWithOAuth({
 			provider: 'google',
 			options: {
-				redirectTo: getCallbackUrl('/app')
+				redirectTo: getOAuthRedirectUrl(getNextPath())
 			}
 		});
 
@@ -62,15 +67,14 @@
 	}
 </script>
 
-<div class="container mx-auto p-10 flex justify-center items-center h-screen">
-	<Card.Root class="w-full max-w-sm">
-		<Card.Header class="">
-			<Card.Title class="">Sign up for an account</Card.Title>
-			<Card.Description class="">Enter your email and password to sign up</Card.Description>
-		</Card.Header>
+<AuthFrame
+	title="Create your account"
+	description="Start with one habit and let each day leave a mark."
+>
+	<Card.Root class="surface-card w-full max-w-sm border-0 shadow-none">
 		<Card.Content class="">
 			{#if error}
-				<div class="mb-4 p-3 text-sm {error.includes('check your email') ? 'text-blue-600 bg-blue-50 border border-blue-200' : 'text-red-600 bg-red-50 border border-red-200'} rounded-md">
+				<div class="mb-4 p-3 text-sm {error.includes('check your email') ? 'pop-surface border' : 'text-red-600 bg-red-50 border border-red-200'} rounded-md">
 					{error}
 				</div>
 			{/if}
@@ -144,9 +148,9 @@
 
 			<Card.Action class="">
 				<p class="text-sm text-gray-500">
-					Already have an account? <a href="/login" class="text-blue-500 underline underline-offset-4 hover:underline font-medium">Login</a>
+					Already have an account? <a href={`/login?next=${encodeURIComponent(getNextPath())}`} class="pop-link underline underline-offset-4 hover:underline font-medium">Login</a>
 				</p>
 			</Card.Action>
 		</Card.Footer>
 	</Card.Root>
-</div>
+</AuthFrame>

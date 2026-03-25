@@ -1,6 +1,5 @@
 import { createClient } from '$lib/supabase/server';
 import { redirect } from '@sveltejs/kit';
-import { getBaseUrl } from '$lib/utils/auth';
 
 export async function GET(event) {
 	const requestUrl = new URL(event.request.url);
