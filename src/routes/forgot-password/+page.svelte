@@ -42,7 +42,7 @@
 	<Card.Root class="surface-card w-full max-w-sm border-0 shadow-none">
 		<Card.Content class="">
 			{#if error}
-				<div class="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+				<div class="mb-4 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
 					{error}
 				</div>
 			{/if}
@@ -73,7 +73,7 @@
 		</Card.Content>
 		<Card.Footer class="flex-col gap-2">
       <Card.Action class="">
-        <p class="text-sm text-gray-500">
+        <p class="text-sm text-muted-foreground">
 				<a href="/login" class="pop-link underline underline-offset-4 hover:underline font-medium">Back to login</a>
         </p>
 			</Card.Action>

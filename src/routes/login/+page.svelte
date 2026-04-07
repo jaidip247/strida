@@ -28,6 +28,10 @@
 		if (errorParam === 'auth_callback_error') {
 			error = 'Authentication failed. Please try again.';
 		}
+		const reason = $page.url.searchParams.get('reason');
+		if (reason === 'account_closed') {
+			error = 'This account was closed and you were signed out.';
+		}
 	});
 
 	async function handleEmailLogin(e) {
@@ -74,7 +78,7 @@
 	<Card.Root class="surface-card w-full max-w-sm border-0 shadow-none">
 		<Card.Content class="">
 			{#if error}
-				<div class="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+				<div class="mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
 					{error}
 				</div>
 			{/if}
@@ -120,7 +124,7 @@
 					<Separator />
 				</div>
 				<div class="relative flex justify-center text-xs uppercase">
-					<span class="bg-white px-2 text-gray-500">Or continue with</span>
+					<span class="bg-background px-2 text-muted-foreground">Or continue with</span>
 				</div>
 			</div>
 			<Button 
@@ -151,7 +155,7 @@
 				Login with Google
 			</Button>
 			<Card.Action class="">
-				<p class="text-sm text-gray-500">
+				<p class="text-sm text-muted-foreground">
 					Don't have an account? <a href={`/register?next=${encodeURIComponent(getNextPath())}`} class="pop-link underline underline-offset-4 hover:underline font-medium">Sign Up</a>
 				</p>
 			</Card.Action>

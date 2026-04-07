@@ -1,22 +1,37 @@
 <script>
-	import { Calendar as CalendarIcon, CheckCircle2 } from "@lucide/svelte";
+	import { Calendar as CalendarIcon, CheckCircle2, Pencil } from "@lucide/svelte";
 	import { createClient } from "$lib/supabase/client";
 	import { onMount } from "svelte";
 	import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 	import * as Card from "$lib/components/ui/card/index.js";
+	import { toast } from 'svelte-sonner';
+	import HabitPagination from '$lib/components/HabitPagination.svelte';
+	import { getHabitPageSlice, getPageRange } from '$lib/utils/pagination.js';
+	import { appSettings } from '$lib/stores/app-settings.js';
+	import { get } from 'svelte/store';
 
 	const supabase = createClient();
 
+	/** @type {'server' | 'legacy' | null} */
+	let habitLoadMode = $state(null);
 	let loading = $state(true);
-	let habits = $state([]);
+	let serverHabits = $state([]);
+	let totalTodayCount = $state(0);
+	let legacyHabitsAll = $state([]);
+	let todayPage = $state(0);
 	let completions = $state({});
 	let loadError = $state('');
+
+	let serverLoadSeq = 0;
+
 	function getLocalDateString(date = new Date()) {
 		const year = date.getFullYear();
 		const month = String(date.getMonth() + 1).padStart(2, '0');
 		const day = String(date.getDate()).padStart(2, '0');
 		return `${year}-${month}-${day}`;
 	}
+
+	let todayStr = $state(getLocalDateString());
 
 	function normalizeDateOnly(value) {
 		if (!value) return null;
@@ -34,9 +49,6 @@
 		return `${y}-${m}-${d}`;
 	}
 
-	let todayStr = $state(getLocalDateString());
-
-	// Check if a date falls within a habit tracking window (inclusive).
 	function isDateInHabitWindow(dateStr, habit) {
 		const checkDate = normalizeDateOnly(dateStr);
 		const start = normalizeDateOnly(habit?.start_date || habit?.Schedule?.progress?.start_date);
@@ -48,97 +60,154 @@
 			end = addDaysToDateString(start, durationDays - 1);
 		}
 
-		// Date-only strings in YYYY-MM-DD are lexicographically comparable.
 		return checkDate >= start && checkDate <= end;
 	}
 
-	// Get habits for a specific date
 	function getHabitsForDate(dateStr) {
-		return habits.filter((habit) => isDateInHabitWindow(dateStr, habit));
+		return legacyHabitsAll.filter((habit) => isDateInHabitWindow(dateStr, habit));
 	}
 
-	// Load habits and completions
-	async function loadData() {
-		loading = true;
-		loadError = '';
-		try {
-			// Get current user
-			const { data: { user }, error: authError } = await supabase.auth.getUser();
-			if (authError || !user) {
-				loadError = 'Not authenticated';
-				loading = false;
-				return;
-			}
+	const habitsPageSize = $derived($appSettings.habitsPerPage);
 
-			// Prefer new habit-centric schema.
-			const { data: habitsData, error: habitsError } = await supabase
-				.from('Habit')
-				.select('*')
-				.eq('user_id', user.id);
+	const legacyTodayHabits = $derived.by(() => getHabitsForDate(todayStr));
+	const legacyTodaySlice = $derived(getHabitPageSlice(legacyTodayHabits, todayPage, habitsPageSize));
 
-			if (!habitsError) {
-				habits = habitsData || [];
-			} else {
-				// Fallback for legacy schema (User -> Schedule -> Habit) when migration is partial.
-				const { data: schedulesData, error: schedulesError } = await supabase
-					.from('Schedule')
-					.select('*')
-					.eq('user_id', user.id);
+	const displayedHabits = $derived(
+		habitLoadMode === 'server' ? serverHabits : habitLoadMode === 'legacy' ? legacyTodaySlice.items : []
+	);
 
-				if (schedulesError) {
-					console.error('Error loading habits (new):', habitsError);
-					console.error('Error loading schedules (legacy):', schedulesError);
-					loadError = `Unable to load habits: ${habitsError.message || schedulesError.message}`;
-					loading = false;
-					return;
-				}
+	const totalForToday = $derived(
+		habitLoadMode === 'server'
+			? totalTodayCount
+			: habitLoadMode === 'legacy'
+				? legacyTodayHabits.length
+				: 0
+	);
 
-				const scheduleIds = (schedulesData || []).map((s) => s.id);
-				if (scheduleIds.length === 0) {
-					habits = [];
-				} else {
-					const { data: legacyHabits, error: legacyHabitsError } = await supabase
-						.from('Habit')
-						.select('*')
-						.in('schedule_id', scheduleIds);
+	const completedTodayCount = $derived(Object.values(completions).filter(Boolean).length);
 
-					if (legacyHabitsError) {
-						console.error('Error loading habits (legacy):', legacyHabitsError);
-						loadError = `Unable to load habits: ${legacyHabitsError.message}`;
-						loading = false;
-						return;
-					}
-
-					habits = (legacyHabits || []).map((habit) => ({
-						...habit,
-						Schedule: schedulesData.find((s) => s.id === habit.schedule_id)
-					}));
-				}
-			}
-
-			// Load today's completions
-			await loadTodayCompletions();
-		} catch (error) {
-			console.error('Error loading data:', error);
-			loadError = error?.message || 'Failed to load habits';
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function loadTodayCompletions() {
-		const dateHabits = getHabitsForDate(todayStr);
-		const habitIds = dateHabits.map(h => h.id);
-
-		if (habitIds.length === 0) {
-			completions = {};
+	async function loadLegacyHabits() {
+		const { data: { user }, error: authError } = await supabase.auth.getUser();
+		if (authError || !user) {
+			loadError = 'Not authenticated';
 			return;
 		}
 
+		const { data: habitsData, error: habitsError } = await supabase
+			.from('Habit')
+			.select('*')
+			.eq('user_id', user.id);
+
+		if (!habitsError) {
+			legacyHabitsAll = habitsData || [];
+			todayPage = 0;
+			await loadTodayCompletions();
+			return;
+		}
+
+		const { data: schedulesData, error: schedulesError } = await supabase
+			.from('Schedule')
+			.select('*')
+			.eq('user_id', user.id);
+
+		if (schedulesError) {
+			console.error('Error loading habits (new):', habitsError);
+			console.error('Error loading schedules (legacy):', schedulesError);
+			loadError = `Unable to load habits: ${habitsError.message || schedulesError.message}`;
+			return;
+		}
+
+		const scheduleIds = (schedulesData || []).map((s) => s.id);
+		if (scheduleIds.length === 0) {
+			legacyHabitsAll = [];
+			todayPage = 0;
+		} else {
+			const { data: legacyHabits, error: legacyHabitsError } = await supabase
+				.from('Habit')
+				.select('*')
+				.in('schedule_id', scheduleIds);
+
+			if (legacyHabitsError) {
+				console.error('Error loading habits (legacy):', legacyHabitsError);
+				loadError = `Unable to load habits: ${legacyHabitsError.message}`;
+				return;
+			}
+
+			legacyHabitsAll = (legacyHabits || []).map((habit) => ({
+				...habit,
+				Schedule: schedulesData.find((s) => s.id === habit.schedule_id)
+			}));
+			todayPage = 0;
+		}
+
+		await loadTodayCompletions();
+	}
+
+	async function loadServerTodayPage(requestedPage, pageSize) {
+		const seq = ++serverLoadSeq;
+		loading = true;
+		loadError = '';
+		try {
+			const { data: { user }, error: authError } = await supabase.auth.getUser();
+			if (authError || !user) {
+				loadError = 'Not authenticated';
+				return;
+			}
+
+			const { count, error: countError } = await supabase
+				.from('Habit')
+				.select('*', { count: 'exact', head: true })
+				.eq('user_id', user.id)
+				.lte('start_date', todayStr)
+				.gte('end_date', todayStr);
+
+			if (countError) throw countError;
+			const total = count ?? 0;
+			const totalPages = Math.max(1, Math.ceil(total / pageSize));
+			const safePage = Math.min(Math.max(0, requestedPage), totalPages - 1);
+
+			if (safePage !== requestedPage) {
+				todayPage = safePage;
+				return;
+			}
+
+			const { from, to } = getPageRange(safePage, pageSize);
+			const { data, error: habitsError } = await supabase
+				.from('Habit')
+				.select('*')
+				.eq('user_id', user.id)
+				.lte('start_date', todayStr)
+				.gte('end_date', todayStr)
+				.order('title', { ascending: true })
+				.order('id', { ascending: true })
+				.range(from, to);
+
+			if (habitsError) throw habitsError;
+			if (seq !== serverLoadSeq) return;
+
+			serverHabits = data || [];
+			totalTodayCount = total;
+			await loadTodayCompletions();
+		} catch (error) {
+			if (seq !== serverLoadSeq) return;
+			console.error('Error loading data:', error);
+			loadError = error?.message || 'Failed to load habits';
+		} finally {
+			if (seq === serverLoadSeq) loading = false;
+		}
+	}
+
+	$effect(() => {
+		if (habitLoadMode !== 'server') return;
+		const page = todayPage;
+		const pageSize = habitsPageSize;
+		void loadServerTodayPage(page, pageSize);
+	});
+
+	async function loadTodayCompletions() {
 		const { data, error } = await supabase
 			.from('HabitCompletion')
-			.select('*')
-			.in('habit_id', habitIds)
+			.select('habit_id, completed')
 			.eq('completion_date', todayStr);
 
 		if (error) {
@@ -147,15 +216,18 @@
 		}
 
 		const completionsMap = {};
-		data.forEach(c => {
+		for (const c of data || []) {
 			completionsMap[c.habit_id] = c.completed;
-		});
+		}
 		completions = completionsMap;
 	}
 
 	async function toggleHabitCompletion(habitId, checked) {
+		if (checked === true && get(appSettings).confirmBeforeComplete) {
+			const ok = typeof window !== 'undefined' && window.confirm('Mark this habit complete for today?');
+			if (!ok) return;
+		}
 		try {
-			// First, try to get existing completion
 			const { data: existing, error: fetchError } = await supabase
 				.from('HabitCompletion')
 				.select('id')
@@ -164,13 +236,11 @@
 				.single();
 
 			if (fetchError && fetchError.code !== 'PGRST116') {
-				// Error other than "not found"
 				console.error('Error fetching completion:', fetchError);
 				return;
 			}
 
 			if (existing) {
-				// Update existing record
 				const { error } = await supabase
 					.from('HabitCompletion')
 					.update({
@@ -184,7 +254,6 @@
 					return;
 				}
 			} else {
-				// Insert new record
 				const { error } = await supabase
 					.from('HabitCompletion')
 					.insert({
@@ -201,30 +270,48 @@
 				}
 			}
 
-			// Update local state
 			completions[habitId] = checked;
 			completions = { ...completions };
 		} catch (error) {
 			console.error('Error toggling habit completion:', error);
+			toast.error('Failed to update completion');
 		}
 	}
 
-	// Get today's habits
-	const todayHabits = $derived.by(() => getHabitsForDate(todayStr));
+	onMount(async () => {
+		loading = true;
+		loadError = '';
+		const { data: { user }, error: authError } = await supabase.auth.getUser();
+		if (authError || !user) {
+			loadError = 'Not authenticated';
+			loading = false;
+			return;
+		}
 
-	onMount(() => {
-		loadData();
+		const { error: probeError } = await supabase
+			.from('Habit')
+			.select('id')
+			.eq('user_id', user.id)
+			.limit(1);
+
+		if (!probeError) {
+			habitLoadMode = 'server';
+		} else {
+			habitLoadMode = 'legacy';
+			await loadLegacyHabits();
+			loading = false;
+		}
 	});
 </script>
 
-<div class="page-shell">
+<div class="page-shell" class:page-shell--compact={$appSettings.compactLists}>
 	<div class="page-container">
 		<div class="page-header">
 			<div>
 				<p class="eyebrow">Daily ledger</p>
 				<h1>Today's Habits</h1>
 			</div>
-			<div class="metric stat">{Object.values(completions).filter(Boolean).length}/{todayHabits.length || 0}</div>
+			<div class="metric stat">{completedTodayCount}/{totalForToday || 0}</div>
 		</div>
 		
 		<div class="page-content">
@@ -235,10 +322,10 @@
 		{:else if loadError}
 			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Content class="pt-6">
-					<div class="text-red-600 text-sm">{loadError}</div>
+					<div class="text-destructive text-sm">{loadError}</div>
 				</Card.Content>
 			</Card.Root>
-		{:else if todayHabits.length === 0}
+		{:else if totalForToday === 0}
 			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Content class="pt-6">
 					<div class="text-center py-8 text-muted-foreground">
@@ -252,17 +339,18 @@
 				<Card.Header>
 					<Card.Title>Today&apos;s checklist</Card.Title>
 					<Card.Description>
-						{todayHabits.length} {todayHabits.length === 1 ? 'habit' : 'habits'} to track today
+						{totalForToday} {totalForToday === 1 ? 'habit' : 'habits'} to track today
 					</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<div class="space-y-3">
-						{#each todayHabits as habit}
+						{#each displayedHabits as habit}
 							<div class="habit-row">
 								<Checkbox
 									id="habit-{habit.id}"
 									checked={completions[habit.id] || false}
-									onCheckedChange={(checked) => toggleHabitCompletion(habit.id, checked)}
+									onCheckedChange={(checked) =>
+										toggleHabitCompletion(habit.id, checked === true)}
 								/>
 								<label for="habit-{habit.id}" class="flex-1 cursor-pointer">
 									<div class="font-medium">{habit.title}</div>
@@ -271,11 +359,15 @@
 									{/if}
 								</label>
 								{#if completions[habit.id]}
-									<CheckCircle2 class="h-5 w-5 text-black ink-settle" />
+									<CheckCircle2 class="h-5 w-5 ink-settle" />
 								{/if}
+								<a href="/app/habit/{habit.id}" class="habit-edit-link" title="Edit habit">
+									<Pencil class="h-4 w-4" />
+								</a>
 							</div>
 						{/each}
 					</div>
+					<HabitPagination bind:page={todayPage} totalItems={totalForToday} pageSize={habitsPageSize} />
 				</Card.Content>
 			</Card.Root>
 		{/if}
@@ -339,12 +431,33 @@
 		padding: 0.7rem 0.75rem;
 		border-radius: 10px;
 		border: 1px solid var(--line);
-		background: white;
+		background: var(--paper-elevated);
 		transition: border-color 120ms ease;
 	}
 
 	.habit-row:hover {
 		border-color: var(--line-strong);
+	}
+
+	.page-shell--compact .habit-row {
+		padding: 0.45rem 0.55rem;
+		gap: 0.5rem;
+	}
+
+	.habit-edit-link {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.3rem;
+		border-radius: 6px;
+		color: var(--ink-soft);
+		transition: color 120ms ease, background 120ms ease;
+		flex-shrink: 0;
+	}
+
+	.habit-edit-link:hover {
+		color: var(--ink);
+		background: var(--line);
 	}
 
 	@media (max-width: 768px) {

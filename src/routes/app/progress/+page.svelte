@@ -1,9 +1,12 @@
 <script>
-	import { ChevronDown } from "@lucide/svelte";
+	import { ChevronDown, Pencil } from "@lucide/svelte";
 	import { createClient } from "$lib/supabase/client";
 	import { onMount } from "svelte";
 	import * as Card from "$lib/components/ui/card/index.js";
 	import * as Tabs from "$lib/components/ui/tabs/index.js";
+	import HabitPagination from "$lib/components/HabitPagination.svelte";
+	import { getHabitPageSlice } from "$lib/utils/pagination.js";
+	import { appSettings } from "$lib/stores/app-settings.js";
 
 	const supabase = createClient();
 
@@ -12,6 +15,9 @@
 	let activeTab = $state("ongoing");
 	let habits = $state([]);
 	let completionByHabit = $state({});
+	let pageUpcoming = $state(0);
+	let pageOngoing = $state(0);
+	let pageCompleted = $state(0);
 
 	function getLocalDateString(date = new Date()) {
 		const year = date.getFullYear();
@@ -143,6 +149,9 @@
 			const habitIds = loadedHabits.map((h) => h.id);
 			if (habitIds.length === 0) {
 				completionByHabit = {};
+				pageUpcoming = 0;
+				pageOngoing = 0;
+				pageCompleted = 0;
 				loading = false;
 				return;
 			}
@@ -165,6 +174,9 @@
 				}
 			}
 			completionByHabit = completionMap;
+			pageUpcoming = 0;
+			pageOngoing = 0;
+			pageCompleted = 0;
 		} catch (e) {
 			error = e?.message || "Failed to load progress";
 		} finally {
@@ -173,9 +185,14 @@
 	}
 
 	const today = $derived(getLocalDateString());
+	const habitsPageSize = $derived($appSettings.habitsPerPage);
 	const upcomingHabits = $derived(habits.filter((h) => getHabitStatus(h, today) === "upcoming"));
 	const ongoingHabits = $derived(habits.filter((h) => getHabitStatus(h, today) === "ongoing"));
 	const completedHabits = $derived(habits.filter((h) => getHabitStatus(h, today) === "completed"));
+
+	const upcomingSlice = $derived(getHabitPageSlice(upcomingHabits, pageUpcoming, habitsPageSize));
+	const ongoingSlice = $derived(getHabitPageSlice(ongoingHabits, pageOngoing, habitsPageSize));
+	const completedSlice = $derived(getHabitPageSlice(completedHabits, pageCompleted, habitsPageSize));
 
 	function getCompletedCount(habit) {
 		const map = completionByHabit[habit.id] || {};
@@ -206,7 +223,7 @@
 	});
 </script>
 
-<div class="page-shell">
+<div class="page-shell" class:page-shell--compact={$appSettings.compactLists}>
 	<div class="page-container">
 		<div class="page-header">
 			<div>
@@ -223,7 +240,7 @@
 		{:else if error}
 			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Content class="pt-6">
-					<div class="text-red-600 text-sm">{error}</div>
+					<div class="text-destructive text-sm">{error}</div>
 				</Card.Content>
 			</Card.Root>
 		{:else}
@@ -239,7 +256,7 @@
 						<Card.Root class="surface-card border-0 shadow-none"><Card.Content class="pt-6 text-sm text-muted-foreground">No upcoming habits.</Card.Content></Card.Root>
 					{:else}
 						<div class="habit-list">
-							{#each upcomingHabits as habit}
+							{#each upcomingSlice.items as habit}
 								<details class="habit-item">
 									<summary>
 										<div class="habit-header-main">
@@ -275,15 +292,19 @@
 												</div>
 											{/each}
 										</div>
-										<div class="legend">
-											<span><i class="legend-dot done"></i> Completed</span>
-											<span><i class="legend-dot missed"></i> Missed</span>
-											<span><i class="legend-dot future"></i> Upcoming</span>
+										<div class="habit-actions-row">
+											<div class="legend">
+												<span><i class="legend-dot done"></i> Completed</span>
+												<span><i class="legend-dot missed"></i> Missed</span>
+												<span><i class="legend-dot future"></i> Upcoming</span>
+											</div>
+											<a href="/app/habit/{habit.id}" class="edit-link"><Pencil class="h-3.5 w-3.5" /> Edit</a>
 										</div>
 									</div>
 								</details>
 							{/each}
 						</div>
+						<HabitPagination bind:page={pageUpcoming} totalItems={upcomingHabits.length} pageSize={habitsPageSize} />
 					{/if}
 				</Tabs.Content>
 
@@ -292,7 +313,7 @@
 						<Card.Root class="surface-card border-0 shadow-none"><Card.Content class="pt-6 text-sm text-muted-foreground">No ongoing habits.</Card.Content></Card.Root>
 					{:else}
 						<div class="habit-list">
-							{#each ongoingHabits as habit}
+							{#each ongoingSlice.items as habit}
 								<details class="habit-item">
 									<summary>
 										<div class="habit-header-main">
@@ -328,15 +349,19 @@
 												</div>
 											{/each}
 										</div>
-										<div class="legend">
-											<span><i class="legend-dot done"></i> Completed</span>
-											<span><i class="legend-dot missed"></i> Missed</span>
-											<span><i class="legend-dot future"></i> Upcoming</span>
+										<div class="habit-actions-row">
+											<div class="legend">
+												<span><i class="legend-dot done"></i> Completed</span>
+												<span><i class="legend-dot missed"></i> Missed</span>
+												<span><i class="legend-dot future"></i> Upcoming</span>
+											</div>
+											<a href="/app/habit/{habit.id}" class="edit-link"><Pencil class="h-3.5 w-3.5" /> Edit</a>
 										</div>
 									</div>
 								</details>
 							{/each}
 						</div>
+						<HabitPagination bind:page={pageOngoing} totalItems={ongoingHabits.length} pageSize={habitsPageSize} />
 					{/if}
 				</Tabs.Content>
 
@@ -345,7 +370,7 @@
 						<Card.Root class="surface-card border-0 shadow-none"><Card.Content class="pt-6 text-sm text-muted-foreground">No completed habits.</Card.Content></Card.Root>
 					{:else}
 						<div class="habit-list">
-							{#each completedHabits as habit}
+							{#each completedSlice.items as habit}
 								<details class="habit-item">
 									<summary>
 										<div class="habit-header-main">
@@ -381,15 +406,19 @@
 												</div>
 											{/each}
 										</div>
-										<div class="legend">
-											<span><i class="legend-dot done"></i> Completed</span>
-											<span><i class="legend-dot missed"></i> Missed</span>
-											<span><i class="legend-dot future"></i> Upcoming</span>
+										<div class="habit-actions-row">
+											<div class="legend">
+												<span><i class="legend-dot done"></i> Completed</span>
+												<span><i class="legend-dot missed"></i> Missed</span>
+												<span><i class="legend-dot future"></i> Upcoming</span>
+											</div>
+											<a href="/app/habit/{habit.id}" class="edit-link"><Pencil class="h-3.5 w-3.5" /> Edit</a>
 										</div>
 									</div>
 								</details>
 							{/each}
 						</div>
+						<HabitPagination bind:page={pageCompleted} totalItems={completedHabits.length} pageSize={habitsPageSize} />
 					{/if}
 				</Tabs.Content>
 			</Tabs.Root>
@@ -432,6 +461,18 @@
 	.loading-state {
 		text-align: center;
 		padding: 2rem;
+	}
+
+	.page-shell--compact .habit-list {
+		gap: 0.5rem;
+	}
+
+	.page-shell--compact .habit-item summary {
+		padding: 0.55rem 0.65rem;
+	}
+
+	.page-shell--compact .habit-details {
+		padding: 0.55rem 0.65rem 0.75rem;
 	}
 
 	.habit-list {
@@ -504,7 +545,7 @@
 
 	.stat-pill {
 		border: 1px solid var(--line);
-		background: white;
+		background: var(--paper-elevated);
 		border-radius: 0.6rem;
 		padding: 0.45rem 0.6rem;
 		display: flex;
@@ -554,23 +595,23 @@
 		border-radius: 0.55rem;
 		padding: 0.4rem 0.25rem;
 		border: 1px solid var(--line);
-		background: #f9f9f7;
+		background: var(--paper);
 	}
 
 	.day-cell.done {
-		background: #efefec;
+		background: var(--line-strong);
 		border-color: var(--line-strong);
 		color: var(--ink);
 	}
 
 	.day-cell.missed {
-		background: #f5f5f3;
+		background: var(--paper);
 		border-color: var(--line);
 		color: var(--ink-soft);
 	}
 
 	.day-cell.future {
-		background: #fcfcfa;
+		background: var(--paper-elevated);
 		border-color: var(--line);
 		color: var(--ink-soft);
 	}
@@ -610,15 +651,42 @@
 	}
 
 	.legend-dot.done {
-		background: #242424;
+		background: var(--ink);
 	}
 
 	.legend-dot.missed {
-		background: #8c8c8c;
+		background: var(--ink-soft);
 	}
 
 	.legend-dot.future {
-		background: #d2d2d2;
+		background: var(--line-strong);
+	}
+
+	.habit-actions-row {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.edit-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--ink-soft);
+		text-decoration: none;
+		padding: 0.3rem 0.5rem;
+		border-radius: 6px;
+		border: 1px solid var(--line);
+		transition: color 120ms ease, border-color 120ms ease;
+		flex-shrink: 0;
+	}
+
+	.edit-link:hover {
+		color: var(--ink);
+		border-color: var(--line-strong);
 	}
 
 	@media (max-width: 768px) {

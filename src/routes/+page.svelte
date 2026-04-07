@@ -1,7 +1,11 @@
 <script>
+	import './landing-marketing.css';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Card from '$lib/components/ui/card/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Switch } from '$lib/components/ui/switch/index.js';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Select from '$lib/components/ui/select/index.js';
 	import {
 		CheckCircle2,
 		Target,
@@ -10,9 +14,11 @@
 		Calendar,
 		BarChart3,
 		Users,
-		Zap,
 		ArrowRight,
-		ChevronDown
+		ChevronDown,
+		Repeat,
+		Bell,
+		ShieldCheck
 	} from '@lucide/svelte';
 
 	let email = $state('');
@@ -20,36 +26,47 @@
 	let submitted = $state(false);
 	let openFaq = $state(null);
 
+	let demoCadence = $state('daily');
+	let demoReminders = $state(true);
+	let demoHabitName = $state('Morning walk');
+	let demoConfirm = $state(true);
+
 	const features = [
 		{
 			icon: Target,
 			title: 'Track Your Habits',
-			description: 'Easily track your daily habits with our intuitive interface. Set goals and monitor your progress over time.'
+			description:
+				'Easily track your daily habits with our intuitive interface. Set goals and monitor your progress over time.'
 		},
 		{
 			icon: TrendingUp,
 			title: 'Visual Progress',
-			description: 'See your progress with beautiful charts and statistics. Understand your patterns and celebrate your wins.'
+			description:
+				'See your progress with beautiful charts and statistics. Understand your patterns and celebrate your wins.'
 		},
 		{
 			icon: Sparkles,
 			title: 'Smart Tips & Tricks',
-			description: 'Get personalized tips and tricks to help you stick to your habits. Learn from experts and build lasting routines.'
+			description:
+				'Get personalized tips and tricks to help you stick to your habits. Learn from experts and build lasting routines.'
 		},
 		{
 			icon: Calendar,
 			title: 'Flexible Scheduling',
-			description: 'Set custom schedules for your habits. Daily, weekly, or custom intervals - whatever works for you.'
+			description:
+				'Set custom schedules for your habits. Daily, weekly, or custom intervals - whatever works for you.'
 		},
 		{
 			icon: BarChart3,
 			title: 'Detailed Analytics',
-			description: 'Dive deep into your habit data. Understand your streaks, success rates, and areas for improvement.'
+			description:
+				'Dive deep into your habit data. Understand your streaks, success rates, and areas for improvement.'
 		},
 		{
 			icon: Users,
 			title: 'Community Support',
-			description: 'Join a community of habit builders. Share your journey and get inspired by others.'
+			description:
+				'Join a community of habit builders. Share your journey and get inspired by others.'
 		}
 	];
 
@@ -67,7 +84,8 @@
 				'Community support'
 			],
 			cta: 'Get Started',
-			popular: false
+			popular: false,
+			href: '/register'
 		},
 		{
 			name: 'Pro',
@@ -84,51 +102,41 @@
 				'Streak recovery'
 			],
 			cta: 'Start Free Trial',
-			popular: true
-		},
-		{
-			name: 'Team',
-			price: '$29.99',
-			period: 'per month',
-			description: 'For teams and groups',
-			features: [
-				'Everything in Pro',
-				'Team collaboration',
-				'Shared habit challenges',
-				'Team analytics',
-				'Admin dashboard',
-				'Custom branding',
-				'API access'
-			],
-			cta: 'Contact Sales',
-			popular: false
+			popular: true,
+			href: '/register'
 		}
 	];
 
 	const faqs = [
 		{
 			question: 'How does Strida help me build habits?',
-			answer: 'Strida provides a comprehensive platform to track your habits, monitor your progress, and receive personalized tips and tricks. Our app uses proven behavioral science principles to help you build lasting habits through consistent tracking, visual feedback, and smart reminders.'
+			answer:
+				'Strida provides a comprehensive platform to track your habits, monitor your progress, and receive personalized tips and tricks. Our app uses proven behavioral science principles to help you build lasting habits through consistent tracking, visual feedback, and smart reminders.'
 		},
 		{
 			question: 'What kind of tips and tricks do you provide?',
-			answer: 'We provide personalized tips based on your habit patterns, success rates, and goals. These include strategies for overcoming common obstacles, motivation techniques, habit stacking ideas, and evidence-based methods from behavioral psychology to help you maintain consistency.'
+			answer:
+				'We provide personalized tips based on your habit patterns, success rates, and goals. These include strategies for overcoming common obstacles, motivation techniques, habit stacking ideas, and evidence-based methods from behavioral psychology to help you maintain consistency.'
 		},
 		{
 			question: 'Can I use Strida for multiple habits?',
-			answer: 'Yes! The free plan allows you to track up to 5 habits, while Pro and Team plans offer unlimited habit tracking. You can organize habits by category, set different schedules, and track them all in one place.'
+			answer:
+				'Yes! The free plan allows you to track up to 5 habits, while Pro offers unlimited habit tracking. You can organize habits by category, set different schedules, and track them all in one place.'
 		},
 		{
 			question: 'Is there a mobile app?',
-			answer: "Yes, Strida is available on both iOS and Android. You can sync your data across all your devices, so you can track your habits whether you're at home or on the go."
+			answer:
+				"Yes, Strida is available on both iOS and Android. You can sync your data across all your devices, so you can track your habits whether you're at home or on the go."
 		},
 		{
 			question: 'How do I cancel my subscription?',
-			answer: "You can cancel your subscription at any time from your account settings. There are no cancellation fees, and you'll continue to have access to Pro features until the end of your billing period."
+			answer:
+				"You can cancel your subscription at any time from your account settings. There are no cancellation fees, and you'll continue to have access to Pro features until the end of your billing period."
 		},
 		{
 			question: 'Do you offer refunds?',
-			answer: "We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied with Strida, contact our support team within 30 days of your purchase for a full refund."
+			answer:
+				"We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied with Strida, contact our support team within 30 days of your purchase for a full refund."
 		}
 	];
 
@@ -150,581 +158,381 @@
 </script>
 
 <svelte:head>
-	<title>Strida - Build Better Habits, One Day at a Time</title>
-	<meta name="description" content="Strida helps you build lasting habits with smart tracking, personalized tips, and beautiful progress visualization." />
+	<title>Strida — Build better habits, one day at a time</title>
+	<meta
+		name="description"
+		content="Strida helps you build lasting habits with smart tracking, personalized tips, and beautiful progress visualization."
+	/>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+	<link
+		href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap"
+		rel="stylesheet"
+	/>
 </svelte:head>
 
-<div class="landing-ambient" aria-hidden="true"></div>
-
-<nav class="topbar">
-	<div class="landing-container bar-inner">
-		<a href="/" class="brand">Strida</a>
-		<div class="actions">
-			<Button variant="ghost" href="/login" disabled={false}>Login</Button>
-			<Button href="/register" disabled={false}>Get Started</Button>
-		</div>
-	</div>
-</nav>
-
-<section class="landing-section hero-section">
-	<div class="landing-container hero-card surface-card">
-		<div class="hero-content">
-			<div class="hero-pill">
-				<Zap class="h-4 w-4" />
-				<span>New: AI-powered habit insights</span>
-			</div>
-			<h1>
-				Build Better Habits,
-				<span>One Day at a Time</span>
-			</h1>
-			<p>
-				Strida helps you build lasting habits with smart tracking, personalized tips, and beautiful progress
-				visualization.
-			</p>
-			<div class="hero-actions">
-				<Button size="lg" class="w-full sm:w-auto" href="/register" disabled={false}>
-					Get Started Free
-					<ArrowRight class="ml-2 h-4 w-4" />
-				</Button>
-				<Button variant="outline" size="lg" class="w-full sm:w-auto" href="/login" disabled={false}>
-					Login
-				</Button>
+<div class="landing-page">
+	<header class="lp-nav">
+		<div class="lp-container lp-nav-inner">
+			<a href="/" class="lp-brand">Strida</a>
+			<nav class="lp-nav-links" aria-label="Primary">
+				<a href="#features">Features</a>
+				<a href="#pricing">Pricing</a>
+				<a href="#faq">Help</a>
+			</nav>
+			<nav class="lp-nav-links-mobile" aria-label="Primary mobile">
+				<a href="#features">Features</a>
+				<a href="#pricing">Pricing</a>
+				<a href="#faq">Help</a>
+			</nav>
+			<div class="lp-nav-actions">
+				<a href="/login" class="lp-btn-pill lp-btn-pill--ghost">Login</a>
+				<a href="/register" class="lp-btn-pill lp-btn-pill--dark">Sign up for free</a>
 			</div>
 		</div>
-	</div>
-</section>
+	</header>
 
-<section id="features" class="landing-section">
-	<div class="landing-container">
-		<div class="section-header">
-			<h2>Everything You Need to Succeed</h2>
-			<p>
-				Strida provides all the tools and insights you need to build and maintain healthy habits.
-			</p>
-		</div>
-		<div class="grid-cards feature-grid">
-			{#each features as feature}
-				{@const Icon = feature.icon}
-				<Card.Root class="surface-card border-0 shadow-none">
-					<Card.Content class="p-6">
-						<div class="icon-wrap">
-							<Icon class="h-5 w-5" />
-						</div>
-						<Card.Title class="mb-2">{feature.title}</Card.Title>
-						<Card.Description>{feature.description}</Card.Description>
-					</Card.Content>
-				</Card.Root>
-			{/each}
-		</div>
-	</div>
-</section>
+	<main id="main-content">
+		<section class="lp-hero" aria-labelledby="hero-heading">
+			<div class="lp-hero-floats" aria-hidden="true">
+				<img class="lp-float lp-float--1" src="/landing/hero-float-1.svg" alt="" />
+				<img class="lp-float lp-float--2" src="/landing/hero-float-2.svg" alt="" />
+				<img class="lp-float lp-float--3" src="/landing/hero-float-3.svg" alt="" />
+				<img class="lp-float lp-float--4" src="/landing/hero-float-1.svg" alt="" />
+				<img class="lp-float lp-float--5" src="/landing/hero-float-2.svg" alt="" />
+				<img class="lp-float lp-float--6" src="/landing/hero-float-3.svg" alt="" />
+				<img class="lp-float lp-float--7" src="/landing/hero-float-1.svg" alt="" />
+				<img class="lp-float lp-float--8" src="/landing/hero-float-3.svg" alt="" />
+			</div>
+			<div class="lp-container">
+				<div class="lp-hero-inner">
+					<h1 id="hero-heading">Show up every day.</h1>
+					<p class="lp-hero-lead">
+						A calm habit system for people who want progress without the pressure. Track, reflect, and
+						keep going.
+					</p>
+					<div class="lp-hero-cta">
+						<a href="/register" class="lp-btn-pill lp-btn-pill--dark">
+							Become the first to know
+							<ArrowRight class="h-4 w-4" aria-hidden="true" />
+						</a>
+					</div>
+				</div>
+			</div>
+		</section>
 
-<section id="pricing" class="landing-section alt-surface">
-	<div class="landing-container">
-		<div class="section-header">
-			<h2>Simple, Transparent Pricing</h2>
-			<p>
-				Choose the plan that works best for you. All plans include our core habit tracking features.
-			</p>
-		</div>
-		<div class="grid-cards pricing-grid">
-			{#each pricingPlans as plan}
-				<Card.Root class="surface-card border-0 shadow-none {plan.popular ? 'popular' : ''}">
-					{#if plan.popular}
-						<div class="popular-tag">Most Popular</div>
-					{/if}
-					<Card.Header class="pb-8 pt-6">
-						<Card.Title class="text-2xl">{plan.name}</Card.Title>
-						<div class="mt-4">
-							<span class="text-4xl font-bold metric">{plan.price}</span>
-							<span class="price-period"> / {plan.period}</span>
-						</div>
-						<Card.Description class="mt-2">{plan.description}</Card.Description>
-					</Card.Header>
-					<Card.Content class="pb-6">
-						<ul class="space-y-3">
-							{#each plan.features as feature}
-								<li class="feature-item">
-									<CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0" />
-									<span class="text-sm">{feature}</span>
-								</li>
-							{/each}
-						</ul>
-					</Card.Content>
-					<Card.Footer class="pt-6">
-						<Button
-							variant={plan.popular ? 'default' : 'outline'}
-							class="w-full"
-							href={plan.name === 'Team' ? undefined : '/register'}
-							disabled={false}
-						>
-							{plan.cta}
-						</Button>
-					</Card.Footer>
-				</Card.Root>
-			{/each}
-		</div>
-	</div>
-</section>
+		<section class="lp-logos" aria-label="Trusted by teams">
+			<div class="lp-container">
+				<div class="lp-logos-row">
+					<img src="/landing/logo-1.svg" alt="" />
+					<img src="/landing/logo-2.svg" alt="" />
+					<img src="/landing/logo-3.svg" alt="" />
+					<img src="/landing/logo-4.svg" alt="" />
+					<img src="/landing/logo-5.svg" alt="" />
+					<img src="/landing/logo-6.svg" alt="" />
+				</div>
+			</div>
+		</section>
 
-<section class="landing-section">
-	<div class="landing-container">
-		<Card.Root class="surface-card border-0 shadow-none newsletter">
-			<Card.Content class="p-8 md:p-12">
-				<div class="section-header compact">
-					<h2>Stay Updated with Habit-Building Tips</h2>
+		<section class="lp-value">
+			<div class="lp-container">
+				<div class="lp-value-head">
+					<h2>We help you stay consistent—clearer, kinder, and easier than a spreadsheet.</h2>
 					<p>
-						Subscribe to our newsletter and get weekly tips, tricks, and insights to help you build better
-						habits.
+						See today’s habits, your streaks, and what’s next. Built for real life: missed days, travel,
+						and busy weeks.
 					</p>
 				</div>
-				{#if submitted}
-					<div class="subscribe-success">
-						<CheckCircle2 class="mx-auto mb-2 h-8 w-8" />
-						<p class="font-medium">Thanks for subscribing! Check your email for confirmation.</p>
+				<div class="lp-preview-wrap">
+					<div class="lp-mock lp-mock--back" aria-hidden="true">
+						<img src="/landing/mockup-a.svg" alt="" />
 					</div>
-				{:else}
-					<form onsubmit={handleNewsletterSubmit} class="subscribe-form">
-						<div class="subscribe-field-wrap">
-							<label for="newsletter-email" class="subscribe-label">Email address</label>
-							<div class="subscribe-input-row">
+					<div class="lp-mock lp-mock--front" aria-hidden="true">
+						<img src="/landing/mockup-b.svg" alt="" />
+					</div>
+					<div class="lp-sticky">Don’t break the chain! — you’ve got this</div>
+				</div>
+			</div>
+		</section>
+
+		<section id="features" class="lp-section lp-section--muted">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2>Everything you need to keep momentum</h2>
+					<p>Tracking, insights, and gentle structure—without turning life into a dashboard.</p>
+				</div>
+				<div class="lp-feature-grid">
+					{#each features as feature}
+						{@const Icon = feature.icon}
+						<div class="lp-demo-cell">
+							<div class="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-600">
+								<Icon class="h-4 w-4" aria-hidden="true" />
+							</div>
+							<div>
+								<h3 class="text-base font-semibold text-neutral-950">{feature.title}</h3>
+								<p class="mt-1 text-sm leading-relaxed text-neutral-600">{feature.description}</p>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<section id="pricing" class="lp-section">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2>With simple pricing</h2>
+					<p>Start free. Upgrade when you want deeper analytics and unlimited habits.</p>
+				</div>
+				<div class="lp-pricing-grid">
+					{#each pricingPlans as plan}
+						<div
+							class="lp-price-card {plan.popular ? 'lp-price-card--popular' : ''}"
+						>
+							<h3 class="text-lg font-semibold text-neutral-950">{plan.name}</h3>
+							<p class="mt-1 text-sm text-neutral-600">{plan.description}</p>
+							<div class="mt-4">
+								<span class="lp-price-tag">{plan.price}</span>
+								<span class="lp-price-period"> / {plan.period}</span>
+							</div>
+							<ul class="lp-price-features">
+								{#each plan.features as item}
+									<li>
+										<CheckCircle2 class="mt-0.5 h-5 w-5 shrink-0 text-neutral-800" aria-hidden="true" />
+										<span>{item}</span>
+									</li>
+								{/each}
+							</ul>
+							<a
+								href={plan.href}
+								class="lp-btn-pill lp-btn-pill--dark w-full text-center"
+							>
+								{plan.cta}
+							</a>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<section class="lp-section lp-section--muted" aria-labelledby="flex-heading">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2 id="flex-heading">What makes Strida flexible?</h2>
+					<p>
+						You decide how often a habit counts, how you get nudged, and what “done” means—so the app
+						adapts to travel, shift work, or low-energy weeks instead of punishing them.
+					</p>
+				</div>
+				<ul class="lp-flex-points" aria-label="How flexibility shows up in the app">
+					<li>
+						<span class="lp-flex-point-icon" aria-hidden="true"><Repeat class="h-5 w-5" /></span>
+						<div>
+							<strong>Schedule that matches reality</strong>
+							<span>Daily, weekdays-only, or weekly—repeat rules live on each habit, not in a rigid template.</span>
+						</div>
+					</li>
+					<li>
+						<span class="lp-flex-point-icon" aria-hidden="true"><Bell class="h-5 w-5" /></span>
+						<div>
+							<strong>Reminders on your terms</strong>
+							<span>Turn pushes on or off per habit so you get signal without notification fatigue.</span>
+						</div>
+					</li>
+					<li>
+						<span class="lp-flex-point-icon" aria-hidden="true"><ShieldCheck class="h-5 w-5" /></span>
+						<div>
+							<strong>Intentional completions</strong>
+							<span>Optional confirmation catches accidental taps—useful for habits you want to log mindfully.</span>
+						</div>
+					</li>
+				</ul>
+				<p class="lp-flex-demo-caption">Try the same controls you’ll use after sign-up:</p>
+				<div class="lp-demo-grid">
+					<div class="lp-demo-cell">
+						<span class="lp-demo-label">Cadence</span>
+						<p class="lp-demo-hint">How often this habit should appear on your list.</p>
+						<Label for="lp-demo-select" class="sr-only">Repeat</Label>
+						<Select.Root type="single" bind:value={demoCadence}>
+							<Select.Trigger id="lp-demo-select" class="w-full max-w-none justify-between">
+								<span data-slot="select-value">
+									{demoCadence === 'daily'
+										? 'Every day'
+										: demoCadence === 'weekdays'
+											? 'Weekdays'
+											: 'Weekly'}
+								</span>
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Item value="daily" label="Every day">Every day</Select.Item>
+								<Select.Item value="weekdays" label="Weekdays">Weekdays</Select.Item>
+								<Select.Item value="weekly" label="Weekly">Weekly</Select.Item>
+							</Select.Content>
+						</Select.Root>
+					</div>
+					<div class="lp-demo-cell">
+						<span class="lp-demo-label">Reminders</span>
+						<p class="lp-demo-hint">Gentle nudges when you want them—not a firehose.</p>
+						<div class="flex flex-1 items-center justify-between gap-2">
+							<span class="text-sm text-neutral-700">Push notifications</span>
+							<Switch bind:checked={demoReminders} aria-label="Toggle reminders demo" />
+						</div>
+					</div>
+					<div class="lp-demo-cell">
+						<span class="lp-demo-label">Habit name</span>
+						<p class="lp-demo-hint">Name it so your future self knows exactly what to do.</p>
+						<Input bind:value={demoHabitName} placeholder="e.g. Read 10 pages" class="w-full" />
+					</div>
+					<div class="lp-demo-cell">
+						<span class="lp-demo-label">Safety</span>
+						<p class="lp-demo-hint">Extra tap so a streak isn’t broken by mistake.</p>
+						<div class="flex flex-1 items-center gap-2 pt-1">
+							<Checkbox id="lp-demo-confirm" bind:checked={demoConfirm} />
+							<Label for="lp-demo-confirm" class="text-sm font-normal text-neutral-700">
+								Confirm before completing
+							</Label>
+						</div>
+					</div>
+				</div>
+				<div class="mt-10 text-center">
+					<a href="/register" class="lp-btn-pill lp-btn-pill--dark inline-flex">
+						Get started
+						<ArrowRight class="h-4 w-4" aria-hidden="true" />
+					</a>
+				</div>
+			</div>
+		</section>
+
+		<section class="lp-section">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2>Stay in the loop</h2>
+					<p>One practical note on habits when we have something worth sharing. No spam.</p>
+				</div>
+				<div class="lp-newsletter">
+					{#if submitted}
+						<div class="flex flex-col items-center gap-2 py-4 text-center">
+							<CheckCircle2 class="h-10 w-10 text-emerald-600" aria-hidden="true" />
+							<p class="font-medium text-neutral-900">Thanks! We’ll be in touch.</p>
+						</div>
+					{:else}
+						<form class="lp-newsletter-form" onsubmit={handleNewsletterSubmit}>
+							<label for="newsletter-email" class="text-sm font-medium text-neutral-700"
+								>Email</label
+							>
+							<div class="lp-newsletter-row">
 								<Input
 									id="newsletter-email"
 									type="email"
 									placeholder="you@example.com"
 									required
-									class="newsletter-input flex-1"
+									class="min-h-11 flex-1"
 									bind:value={email}
 								/>
-								<Button type="submit" disabled={isSubmitting || false} class="newsletter-submit sm:w-auto">
-									{#if isSubmitting}
-										Subscribing...
-									{:else}
-										Get Weekly Tips
-										<ArrowRight class="ml-2 h-4 w-4" />
-									{/if}
+								<Button type="submit" class="rounded-full px-6" disabled={isSubmitting}>
+									{isSubmitting ? 'Sending…' : 'Subscribe'}
 								</Button>
 							</div>
-							<p class="subscribe-meta">One practical email each week. No spam. Unsubscribe anytime.</p>
-						</div>
-					</form>
-				{/if}
-			</Card.Content>
-		</Card.Root>
-	</div>
-</section>
-
-<section id="faq" class="landing-section alt-surface">
-	<div class="landing-container">
-		<div class="section-header">
-			<h2>Frequently Asked Questions</h2>
-			<p>
-				Everything you need to know about Strida and how it can help you build better habits.
-			</p>
-		</div>
-		<div class="faq-list">
-			{#each faqs as faq, index}
-				<Card.Root class="surface-card border-0 shadow-none">
-					<Card.Header class="">
-						<button
-							type="button"
-							class="faq-trigger"
-							onclick={() => toggleFaq(index)}
-							onkeydown={(e) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									toggleFaq(index);
-								}
-							}}
-						>
-							<div class="faq-row">
-								<Card.Title class="text-left">{faq.question}</Card.Title>
-								<ChevronDown class="h-5 w-5 shrink-0 transition-transform {openFaq === index ? 'rotate-180' : ''}" />
-							</div>
-						</button>
-					</Card.Header>
-					{#if openFaq === index}
-						<Card.Content class="pt-0">
-							<p class="text-muted-foreground">{faq.answer}</p>
-						</Card.Content>
+						</form>
 					{/if}
-				</Card.Root>
-			{/each}
-		</div>
-	</div>
-</section>
+				</div>
+			</div>
+		</section>
 
-<section class="landing-section">
-	<div class="landing-container">
-		<div class="final-cta">
-			<h2>Ready to Build Better Habits?</h2>
-			<p>
-				Join thousands of people who are already using Strida to transform their lives, one habit at a time.
-			</p>
-			<div class="hero-actions">
-				<Button size="lg" class="w-full sm:w-auto" href="/register" disabled={false}>
-					Start Your Free Trial
-					<ArrowRight class="ml-2 h-4 w-4" />
-				</Button>
-				<Button variant="outline" size="lg" class="w-full sm:w-auto" href="/login" disabled={false}>
-					Already have an account? Login
-				</Button>
+		<section id="faq" class="lp-section lp-section--muted">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2>Frequently asked questions</h2>
+					<p>Quick answers about Strida and how we handle your data and subscription.</p>
+				</div>
+				<div class="lp-faq-list">
+					{#each faqs as faq, index}
+						<div class="lp-faq-item">
+							<button
+								type="button"
+								class="lp-faq-trigger"
+								aria-expanded={openFaq === index}
+								onclick={() => toggleFaq(index)}
+							>
+								<span>{faq.question}</span>
+								<ChevronDown
+									class="h-5 w-5 shrink-0 transition-transform {openFaq === index
+										? 'rotate-180'
+										: ''}"
+									aria-hidden="true"
+								/>
+							</button>
+							{#if openFaq === index}
+								<div class="lp-faq-body">
+									{faq.answer}
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<section class="lp-quote" aria-labelledby="quote-heading">
+			<div class="lp-container">
+				<div class="lp-quote-inner">
+					<div>
+						<h2 id="quote-heading" class="lp-quote-text">
+							When you make it easy to show up, the small wins stack faster than you expect.
+						</h2>
+						<p class="lp-quote-sub">
+							Strida is for anyone who’s tired of all-or-nothing streaks—and wants a system that still
+							feels human.
+						</p>
+						<div class="lp-quote-cta">
+							<a href="/register" class="lp-btn-pill lp-btn-pill--light">Join now</a>
+						</div>
+					</div>
+					<div class="lp-quote-img">
+						<img src="/landing/letter.svg" alt="" />
+					</div>
+				</div>
+			</div>
+		</section>
+	</main>
+
+	<footer class="lp-footer">
+		<div class="lp-container">
+			<div class="lp-footer-grid">
+				<div>
+					<div class="lp-footer-brand">Strida</div>
+					<p class="mt-3 max-w-xs text-sm leading-relaxed text-emerald-100/90">
+						One mark at a time. Build habits that fit your life.
+					</p>
+				</div>
+				<div class="lp-footer-col">
+					<h3>Company</h3>
+					<ul>
+						<li><a href="/">About</a></li>
+						<li><a href="#faq">Careers</a></li>
+						<li><a href="#faq">Contact</a></li>
+					</ul>
+				</div>
+				<div class="lp-footer-col">
+					<h3>Product</h3>
+					<ul>
+						<li><a href="#features">Features</a></li>
+						<li><a href="#pricing">Pricing</a></li>
+						<li><a href="/login">Login</a></li>
+						<li><a href="/register">Sign up</a></li>
+					</ul>
+				</div>
+				<div class="lp-footer-col">
+					<h3>Social</h3>
+					<ul>
+						<li><a href="https://twitter.com" rel="noopener noreferrer">Twitter</a></li>
+						<li><a href="https://github.com" rel="noopener noreferrer">GitHub</a></li>
+					</ul>
+				</div>
+			</div>
+			<div class="lp-footer-bottom">
+				© {new Date().getFullYear()} Strida. All rights reserved.
 			</div>
 		</div>
-	</div>
-</section>
-
-<style>
-	.landing-ambient {
-		position: fixed;
-		inset: 0;
-		pointer-events: none;
-		z-index: -1;
-		background:
-			radial-gradient(85% 70% at 12% 16%, color-mix(in srgb, var(--pop) 10%, transparent 90%) 0%, transparent 60%),
-			radial-gradient(75% 72% at 88% 82%, color-mix(in srgb, #ffffff 86%, var(--pop) 14%) 0%, transparent 58%),
-			linear-gradient(120deg, #f7f7f4 0%, #faf8f2 45%, #f7f7f4 100%);
-		background-size: 170% 170%, 190% 190%, 130% 130%;
-		animation: ambientShift 70s ease-in-out infinite alternate;
-	}
-
-	.topbar {
-		position: sticky;
-		top: 0;
-		z-index: 30;
-		background: color-mix(in srgb, var(--paper) 88%, white 12%);
-		border-bottom: 1px solid var(--line-strong);
-		backdrop-filter: blur(6px);
-	}
-
-	.landing-container {
-		max-width: 1100px;
-		margin: 0 auto;
-		padding: 0 1rem;
-	}
-
-	.bar-inner {
-		height: 64px;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-	}
-
-	.brand {
-		font-size: 1.35rem;
-		font-weight: 700;
-		letter-spacing: -0.03em;
-	}
-
-	.actions {
-		display: flex;
-		gap: 0.55rem;
-	}
-
-	.landing-section {
-		padding: 3.5rem 0;
-	}
-
-	.hero-section {
-		padding-top: 2.2rem;
-	}
-
-	.hero-card {
-		overflow: hidden;
-	}
-
-	.hero-content {
-		padding: 2.3rem;
-	}
-
-	.hero-pill {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.45rem;
-		border: 1px solid color-mix(in srgb, var(--pop) 28%, var(--line-strong) 72%);
-		border-radius: 999px;
-		padding: 0.34rem 0.7rem;
-		font-size: 0.78rem;
-		color: var(--ink-soft);
-		background: color-mix(in srgb, var(--pop-soft) 48%, #ffffff 52%);
-	}
-
-	.hero-content h1 {
-		margin-top: 1rem;
-		font-size: clamp(2.2rem, 5.5vw, 4.4rem);
-		line-height: 1.03;
-		letter-spacing: -0.04em;
-		font-weight: 700;
-	}
-
-	.hero-content h1 span {
-		display: block;
-		color: var(--ink-soft);
-	}
-
-	.hero-content p {
-		max-width: 62ch;
-		margin-top: 1rem;
-		color: var(--ink-soft);
-		font-size: 1.06rem;
-	}
-
-	.hero-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.7rem;
-		margin-top: 1.3rem;
-	}
-
-	.section-header {
-		text-align: center;
-		margin-bottom: 2.2rem;
-	}
-
-	.section-header h2 {
-		font-size: clamp(1.8rem, 4vw, 3rem);
-		line-height: 1.08;
-		letter-spacing: -0.03em;
-		font-weight: 680;
-	}
-
-	.section-header p {
-		max-width: 70ch;
-		margin: 0.9rem auto 0;
-		color: var(--ink-soft);
-	}
-
-	.grid-cards {
-		display: grid;
-		gap: 0.85rem;
-	}
-
-	.feature-grid {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.pricing-grid {
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-	}
-
-	.alt-surface {
-		background: color-mix(in srgb, var(--paper) 76%, white 24%);
-		border-top: 1px solid var(--line);
-		border-bottom: 1px solid var(--line);
-	}
-
-	.icon-wrap {
-		height: 2.25rem;
-		width: 2.25rem;
-		border: 1px solid var(--line-strong);
-		border-radius: 0.65rem;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		margin-bottom: 0.9rem;
-		color: var(--ink-soft);
-		background: white;
-	}
-
-	.popular-tag {
-		position: absolute;
-		top: -0.62rem;
-		left: 50%;
-		transform: translateX(-50%);
-		background: var(--pop);
-		color: #fff;
-		border-radius: 999px;
-		padding: 0.17rem 0.55rem;
-		font-size: 0.72rem;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-
-	.price-period {
-		color: var(--ink-soft);
-	}
-
-	.feature-item {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-		color: var(--ink-soft);
-	}
-
-	.feature-item :global(svg) {
-		color: var(--ink);
-	}
-
-	.section-header.compact {
-		margin-bottom: 1.2rem;
-	}
-
-	.subscribe-form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-	}
-
-	.subscribe-field-wrap {
-		max-width: 720px;
-		margin: 0 auto;
-		width: 100%;
-	}
-
-	.subscribe-label {
-		display: block;
-		font-size: 0.84rem;
-		font-weight: 600;
-		color: var(--ink-soft);
-		margin-bottom: 0.38rem;
-	}
-
-	.subscribe-input-row {
-		display: grid;
-		grid-template-columns: 1fr auto;
-		gap: 0.55rem;
-		align-items: center;
-	}
-
-	:global(.newsletter-input) {
-		height: 3.15rem;
-		border-radius: 0.65rem;
-		border-width: 2px;
-		border-color: #ceccc5;
-		background: #fff;
-		padding-left: 0.95rem;
-		padding-right: 0.95rem;
-		font-size: 0.96rem;
-		font-weight: 520;
-		color: #1d1d1d;
-		box-shadow: none;
-	}
-
-	:global(.newsletter-input::placeholder) {
-		color: #8f8f8f;
-	}
-
-	:global(.newsletter-input:focus-visible) {
-		border-color: #adaca5;
-		box-shadow: 0 0 0 2px rgba(173, 172, 165, 0.18);
-	}
-
-	:global(.newsletter-submit) {
-		height: 3.15rem;
-		border-radius: 0.65rem;
-		padding-left: 1.2rem;
-		padding-right: 1.2rem;
-		font-weight: 600;
-	}
-
-	.subscribe-meta {
-		margin-top: 0.44rem;
-		font-size: 0.78rem;
-		color: var(--ink-soft);
-	}
-
-	.subscribe-success {
-		border: 1px solid var(--line-strong);
-		border-radius: 12px;
-		padding: 1rem;
-		color: var(--ink);
-		background: white;
-	}
-
-	.faq-list {
-		max-width: 760px;
-		margin: 0 auto;
-		display: grid;
-		gap: 0.7rem;
-	}
-
-	.faq-trigger {
-		width: 100%;
-		text-align: left;
-		background: transparent;
-		border: 0;
-		cursor: pointer;
-	}
-
-	.faq-row {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.8rem;
-	}
-
-	.final-cta {
-		text-align: center;
-		max-width: 780px;
-		margin: 0 auto;
-	}
-
-	.final-cta h2 {
-		font-size: clamp(1.8rem, 4.3vw, 3.3rem);
-		line-height: 1.08;
-		letter-spacing: -0.035em;
-		font-weight: 680;
-	}
-
-	.final-cta p {
-		margin-top: 0.8rem;
-		color: var(--ink-soft);
-	}
-
-	.final-cta .hero-actions {
-		justify-content: center;
-	}
-
-	@media (max-width: 900px) {
-		.feature-grid,
-		.pricing-grid {
-			grid-template-columns: repeat(2, minmax(0, 1fr));
-		}
-	}
-
-	@media (max-width: 768px) {
-		.hero-card {
-			grid-template-columns: 1fr;
-		}
-
-		.hero-content {
-			padding: 1.15rem;
-		}
-
-		.feature-grid,
-		.pricing-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.actions {
-			gap: 0.35rem;
-		}
-
-		:global(.subscribe-form) {
-			flex-direction: row;
-			flex-wrap: wrap;
-		}
-
-		.subscribe-input-row {
-			grid-template-columns: 1fr;
-		}
-	}
-
-	@media (prefers-reduced-motion: reduce) {
-		.landing-ambient {
-			animation: none;
-		}
-	}
-
-	@keyframes ambientShift {
-		0% {
-			background-position: 0% 0%, 100% 100%, 50% 50%;
-		}
-		50% {
-			background-position: 10% 8%, 88% 90%, 56% 45%;
-		}
-		100% {
-			background-position: 18% 16%, 82% 84%, 60% 40%;
-		}
-	}
-</style>
+	</footer>
+</div>

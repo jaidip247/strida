@@ -12,6 +12,7 @@
 	import { createClient } from '$lib/supabase/client';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { toast } from 'svelte-sonner';
 
 	const supabase = createClient();
 
@@ -139,12 +140,17 @@
 			if (userCheckError && userCheckError.code === 'PGRST116') {
 				// User record doesn't exist, create it
 				console.log('User record not found, creating User record...');
+				const meta = user.user_metadata || {};
+				const strOrNull = (v) => (typeof v === 'string' && v.trim() ? v.trim() : null);
 				const { error: createUserError } = await supabase
 					.from('User')
 					.insert({
 						id: user.id,
 						email: user.email || '',
-						name: user.user_metadata?.name || user.user_metadata?.full_name || '',
+						name: meta.name || meta.full_name || '',
+						bio: strOrNull(meta.bio),
+						timezone: strOrNull(meta.timezone),
+						country: strOrNull(meta.country),
 						status: 'ACTIVE',
 						created_at: new Date().toISOString(),
 						updated_at: new Date().toISOString()
@@ -179,8 +185,8 @@
 			}
 
 			success = true;
-			
-			// Redirect to app page after a short delay
+			toast.success('Habit created successfully');
+
 			setTimeout(() => {
 				goto('/app');
 			}, 1500);
@@ -230,7 +236,7 @@
 		{:else if error && !loading && error.includes('Not authenticated')}
 			<Card.Root class="surface-card mb-4 border-0 shadow-none">
 				<Card.Content class="pt-6">
-					<div class="text-red-600 text-sm mb-4">{error}</div>
+					<div class="text-destructive text-sm mb-4">{error}</div>
 					<Button onclick={() => goto('/login?next=/app/add')} class="" disabled={false}>
 						Go to Login
 					</Button>
@@ -244,12 +250,12 @@
 				</Card.Header>
 				<Card.Content class="">
 					{#if success}
-						<div class="mb-4 p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+						<div class="mb-4 p-3 text-sm text-primary bg-primary/10 border border-primary/20 rounded-md">
 							Habit created successfully! Redirecting...
 						</div>
 					{/if}
 					{#if error}
-						<div class="mb-4 p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
+						<div class="mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
 							{error}
 						</div>
 					{/if}
@@ -267,7 +273,7 @@
 									required
 									class=""
 								/>
-								<p class="text-xs text-gray-500">Give your habit a clear, actionable title</p>
+								<p class="text-xs text-muted-foreground">Give your habit a clear, actionable title</p>
 							</div>
 
 							<div class="grid gap-2">
@@ -279,7 +285,7 @@
 									disabled={saving}
 									class="min-h-[100px]"
 								/>
-								<p class="text-xs text-gray-500">Optional: Add notes or motivation for this habit</p>
+								<p class="text-xs text-muted-foreground">Optional: Add notes or motivation for this habit</p>
 							</div>
 
 							<Separator class="my-4" />
@@ -304,7 +310,7 @@
 											<Calendar bind:value={calendarDate} class="" />
 										</Popover.Content>
 									</Popover.Root>
-									<p class="text-xs text-gray-500">Defaults to today. Set tomorrow or any future date if you want it to start later.</p>
+									<p class="text-xs text-muted-foreground">Defaults to today. Set tomorrow or any future date if you want it to start later.</p>
 								</div>
 
 								<div class="grid gap-2">
@@ -318,7 +324,7 @@
 										disabled={saving}
 										class=""
 									/>
-									<p class="text-xs text-gray-500">
+									<p class="text-xs text-muted-foreground">
 										End date will be <span class="font-medium">{endDate}</span> ({tracking.duration_days} days total).
 									</p>
 								</div>

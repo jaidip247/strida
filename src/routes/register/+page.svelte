@@ -2,6 +2,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import { Textarea } from '$lib/components/ui/textarea/index.js';
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { createClient } from '$lib/supabase/client';
@@ -14,6 +15,13 @@
 	
 	let email = '';
 	let password = '';
+	let name = '';
+	let bio = '';
+	let timezone =
+		typeof Intl !== 'undefined'
+			? Intl.DateTimeFormat().resolvedOptions().timeZone || ''
+			: '';
+	let country = '';
 	let loading = false;
 	let error = '';
 
@@ -25,12 +33,26 @@
 		e.preventDefault();
 		loading = true;
 		error = '';
+		const normalizedEmail = email.trim().toLowerCase();
+		const trimmedName = name.trim();
+		if (!trimmedName) {
+			error = 'Please enter your name.';
+			loading = false;
+			return;
+		}
 
 		const { data, error: authError } = await supabase.auth.signUp({
-			email,
+			email: normalizedEmail,
 			password,
 			options: {
-				emailRedirectTo: getOAuthRedirectUrl(getNextPath())
+				emailRedirectTo: getOAuthRedirectUrl(getNextPath()),
+				data: {
+					full_name: trimmedName,
+					name: trimmedName,
+					...(bio.trim() ? { bio: bio.trim() } : {}),
+					...(timezone.trim() ? { timezone: timezone.trim() } : {}),
+					...(country.trim() ? { country: country.trim() } : {})
+				}
 			}
 		});
 
@@ -74,12 +96,28 @@
 	<Card.Root class="surface-card w-full max-w-sm border-0 shadow-none">
 		<Card.Content class="">
 			{#if error}
-				<div class="mb-4 p-3 text-sm {error.includes('check your email') ? 'pop-surface border' : 'text-red-600 bg-red-50 border border-red-200'} rounded-md">
+				<div
+					class="mb-4 p-3 text-sm {/check your email|check your inbox|not confirmed yet/i.test(error)
+						? 'pop-surface border'
+						: 'text-destructive bg-destructive/10 border border-destructive/20'} rounded-md"
+				>
 					{error}
 				</div>
 			{/if}
 			<form on:submit={handleEmailSignUp}>
 				<div class="flex flex-col gap-6">
+					<div class="grid gap-2">
+						<Label for="name" class="">Name</Label>
+						<Input
+							id="name"
+							type="text"
+							placeholder="How we should address you"
+							required
+							autocomplete="name"
+							bind:value={name}
+							disabled={loading}
+						/>
+					</div>
 					<div class="grid gap-2">
 						<Label for="email" class="">Email</Label>
 						<Input 
@@ -103,6 +141,39 @@
 							class="" 
 						/>
 					</div>
+					<div class="grid gap-2">
+						<Label for="bio" class="">Bio <span class="text-muted-foreground font-normal">(optional)</span></Label>
+						<Textarea
+							id="bio"
+							placeholder="A line about you or your goals"
+							rows={3}
+							bind:value={bio}
+							disabled={loading}
+							class="min-h-[4.5rem] resize-y"
+						/>
+					</div>
+					<div class="grid gap-2">
+						<Label for="timezone" class="">Timezone</Label>
+						<Input
+							id="timezone"
+							type="text"
+							placeholder="e.g. America/New_York"
+							bind:value={timezone}
+							disabled={loading}
+						/>
+						<p class="text-xs text-muted-foreground">Pre-filled from your browser; adjust if needed.</p>
+					</div>
+					<div class="grid gap-2">
+						<Label for="country" class="">Country / region <span class="text-muted-foreground font-normal">(optional)</span></Label>
+						<Input
+							id="country"
+							type="text"
+							placeholder="e.g. Canada"
+							autocomplete="country-name"
+							bind:value={country}
+							disabled={loading}
+						/>
+					</div>
 					<Button type="submit" class="w-full" disabled={loading}>
 						{loading ? 'Signing up...' : 'Sign up'}
 					</Button>
@@ -115,7 +186,7 @@
 					<Separator />
 				</div>
 				<div class="relative flex justify-center text-xs uppercase">
-					<span class="bg-white px-2 text-gray-500">Or continue with</span>
+					<span class="bg-background px-2 text-muted-foreground">Or continue with</span>
 				</div>
 			</div>
 			<Button 
@@ -147,7 +218,7 @@
 			</Button>
 
 			<Card.Action class="">
-				<p class="text-sm text-gray-500">
+				<p class="text-sm text-muted-foreground">
 					Already have an account? <a href={`/login?next=${encodeURIComponent(getNextPath())}`} class="pop-link underline underline-offset-4 hover:underline font-medium">Login</a>
 				</p>
 			</Card.Action>
