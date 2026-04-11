@@ -13,6 +13,9 @@
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { toast } from 'svelte-sonner';
+	import { FREE_DURATION_DAYS, FREE_HABIT_LIMIT } from '$lib/constants/plan.js';
+
+	let { data } = $props();
 
 	const supabase = createClient();
 
@@ -43,8 +46,13 @@
 
 	let tracking = $state({
 		start_date: getLocalDateString(),
-		duration_days: 21
+		duration_days: FREE_DURATION_DAYS
 	});
+
+	const atHabitLimit = $derived(
+		data.plan === 'free' && (data.habitCount ?? 0) >= FREE_HABIT_LIMIT
+	);
+	const isFreePlan = $derived(data.plan === 'free');
 
 	let calendarDate = $state(null);
 	let popoverOpen = $state(false);
@@ -118,11 +126,19 @@
 			return;
 		}
 
-		const durationDays = Math.max(Number(tracking.duration_days || 1), 1);
+		const durationDays = isFreePlan
+			? FREE_DURATION_DAYS
+			: Math.max(Number(tracking.duration_days || 1), 1);
 		const startDateToSave = tracking.start_date || getLocalDateString();
 
 		if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateToSave)) {
 			error = 'Start date is invalid';
+			saving = false;
+			return;
+		}
+
+		if (isFreePlan && atHabitLimit) {
+			error = `Free accounts can have up to ${FREE_HABIT_LIMIT} habits. Upgrade to Pro for unlimited habits.`;
 			saving = false;
 			return;
 		}
@@ -191,7 +207,13 @@
 				goto('/app');
 			}, 1500);
 		} catch (e) {
-			error = e.message || 'Failed to create habit';
+			const msg = e?.message || String(e);
+			if (msg.includes('row-level security') || msg.includes('42501')) {
+				error =
+					'Could not create this habit (free tier limit or duration rules). Upgrade to Pro or adjust your habits.';
+			} else {
+				error = msg || 'Failed to create habit';
+			}
 			console.error('Error creating habit:', e);
 			console.error('Error details:', {
 				message: e.message,
@@ -211,7 +233,7 @@
 		};
 		tracking = {
 			start_date: getLocalDateString(),
-			duration_days: 21
+			duration_days: FREE_DURATION_DAYS
 		};
 		calendarDate = parseDate(tracking.start_date);
 		error = '';
@@ -240,6 +262,20 @@
 					<Button onclick={() => goto('/login?next=/app/add')} class="" disabled={false}>
 						Go to Login
 					</Button>
+				</Card.Content>
+			</Card.Root>
+		{:else if atHabitLimit}
+			<Card.Root class="surface-card border-0 shadow-none">
+				<Card.Header>
+					<Card.Title>Habit limit reached</Card.Title>
+					<Card.Description>
+						Free accounts support up to {FREE_HABIT_LIMIT} habits with a {FREE_DURATION_DAYS}-day duration
+						each. Upgrade to Pro for unlimited habits and custom durations.
+					</Card.Description>
+				</Card.Header>
+				<Card.Content class="flex flex-wrap gap-2">
+					<Button href="/app/upgrade">Upgrade to Pro</Button>
+					<Button variant="outline" href="/app">Back to Today</Button>
 				</Card.Content>
 			</Card.Root>
 		{:else}
@@ -315,18 +351,33 @@
 
 								<div class="grid gap-2">
 									<Label for="duration" class="">Duration (days)</Label>
-									<Input 
-										id="duration" 
-										type="number" 
-										min="1"
-										step="1"
-										bind:value={tracking.duration_days}
-										disabled={saving}
-										class=""
-									/>
-									<p class="text-xs text-muted-foreground">
-										End date will be <span class="font-medium">{endDate}</span> ({tracking.duration_days} days total).
-									</p>
+									{#if isFreePlan}
+										<Input
+											id="duration"
+											type="number"
+											value={FREE_DURATION_DAYS}
+											readonly
+											disabled
+											class="bg-muted"
+										/>
+										<p class="text-xs text-muted-foreground">
+											Free tier uses a fixed {FREE_DURATION_DAYS}-day window. End date:
+											<span class="font-medium">{endDate}</span> — upgrade to Pro for custom durations.
+										</p>
+									{:else}
+										<Input
+											id="duration"
+											type="number"
+											min="1"
+											step="1"
+											bind:value={tracking.duration_days}
+											disabled={saving}
+											class=""
+										/>
+										<p class="text-xs text-muted-foreground">
+											End date will be <span class="font-medium">{endDate}</span> ({tracking.duration_days} days total).
+										</p>
+									{/if}
 								</div>
 							</div>
 

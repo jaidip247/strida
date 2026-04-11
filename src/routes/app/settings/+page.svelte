@@ -1,6 +1,8 @@
 <script>
 	import { version } from '$app/environment';
 	import { onMount } from 'svelte';
+	import { get } from 'svelte/store';
+	import { page } from '$app/stores';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
@@ -37,6 +39,8 @@
 		hasSubscription
 	} from '$lib/utils/push';
 
+	let { data } = $props();
+
 	const supabase = createClient();
 	const appVersion = version || '0.0.1';
 
@@ -45,6 +49,10 @@
 	let pushEnabled = $state(false);
 	let pushToggling = $state(false);
 	let pushInitDone = $state(false);
+
+	let reminderHourLocal = $state(20);
+	let reminderHourSaving = $state(false);
+	let reminderHourLoaded = $state(false);
 
 	let exportBusy = $state(false);
 	let deleteDialogOpen = $state(false);
@@ -204,6 +212,57 @@
 		return raw;
 	}
 
+	async function loadReminderHour() {
+		try {
+			const {
+				data: { user },
+				error: authError
+			} = await supabase.auth.getUser();
+			if (authError || !user) {
+				reminderHourLoaded = true;
+				return;
+			}
+			const { data: row } = await supabase
+				.from('User')
+				.select('reminder_hour_local')
+				.eq('id', user.id)
+				.maybeSingle();
+			if (row && row.reminder_hour_local != null) {
+				reminderHourLocal = row.reminder_hour_local;
+			}
+		} catch (e) {
+			console.error(e);
+		} finally {
+			reminderHourLoaded = true;
+		}
+	}
+
+	async function saveReminderHour() {
+		reminderHourSaving = true;
+		try {
+			const {
+				data: { user },
+				error: authError
+			} = await supabase.auth.getUser();
+			if (authError || !user) {
+				toast.error('Sign in to save');
+				return;
+			}
+			const h = Math.min(23, Math.max(0, Number(reminderHourLocal) || 0));
+			reminderHourLocal = h;
+			const { error } = await supabase
+				.from('User')
+				.update({ reminder_hour_local: h, updated_at: new Date().toISOString() })
+				.eq('id', user.id);
+			if (error) throw error;
+			toast.success('Reminder hour saved');
+		} catch (e) {
+			toast.error(getFriendlySupabaseError(e, 'Could not save'));
+		} finally {
+			reminderHourSaving = false;
+		}
+	}
+
 	async function loadPushState() {
 		const {
 			data: { user },
@@ -274,6 +333,11 @@
 	onMount(() => {
 		pushSupported = isPushSupported();
 		void loadPushState();
+		void loadReminderHour();
+		if (get(page).url.searchParams.get('checkout') === 'success') {
+			toast.success('Subscription updated. Pro features are unlocked.');
+			void goto('/app/settings', { replaceState: true, noScroll: true });
+		}
 	});
 </script>
 
@@ -291,6 +355,25 @@
 		</div>
 
 		<div class="page-content">
+			<Card.Root class="surface-card mb-4 border-0 shadow-none">
+				<Card.Header>
+					<Card.Title>Subscription</Card.Title>
+					<Card.Description>
+						{#if data.plan === 'paid'}
+							You have Pro access (unlimited habits, insights, and analytics).
+						{:else}
+							You are on the free plan (up to 2 habits, 21-day duration each). Upgrade for full access.
+						{/if}
+					</Card.Description>
+				</Card.Header>
+				<Card.Content class="flex flex-wrap gap-2">
+					{#if data.plan === 'free'}
+						<Button href="/app/upgrade">Upgrade to Pro</Button>
+					{:else}
+						<Button variant="outline" href="/app/upgrade">Manage / learn more</Button>
+					{/if}
+				</Card.Content>
+			</Card.Root>
 			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Header>
 					<Card.Title>General</Card.Title>
@@ -447,7 +530,9 @@
 			<Card.Root class="surface-card border-0 shadow-none">
 				<Card.Header>
 					<Card.Title>Notifications</Card.Title>
-					<Card.Description>Get daily reminders to check in on your habits.</Card.Description>
+					<Card.Description>
+						Morning digest (9:00) and an end-of-day list of what is still open—plus optional nudges.
+					</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					{#if !pushSupported}
@@ -470,8 +555,8 @@
 									</p>
 									<p class="field-hint muted push-sub">
 										{pushEnabled
-											? 'You will receive daily habit reminders.'
-											: 'Enable to get daily habit reminders in your browser.'}
+											? 'You will get a morning habit list and an end-of-day pending reminder (and optional nudges).'
+											: 'Enable for morning and end-of-day habit reminders in your browser.'}
 									</p>
 								</div>
 							</div>
@@ -490,6 +575,37 @@
 								Notifications are blocked by your browser. Update your browser settings to allow
 								notifications from this site.
 							</p>
+						{/if}
+						{#if pushUser && reminderHourLoaded}
+							<div class="field-row mt-4">
+								<div class="field-label">
+									<Label for="reminder-hour">End-of-day reminder (local hour)</Label>
+									<p class="field-hint">
+										Each day at this hour (0–23, your timezone), you get a push listing habits not
+										yet marked done. A separate digest at 9:00 lists habits to track today.
+									</p>
+								</div>
+								<div class="flex flex-wrap items-center gap-2">
+									<Input
+										id="reminder-hour"
+										type="number"
+										min="0"
+										max="23"
+										class="w-20"
+										bind:value={reminderHourLocal}
+										disabled={reminderHourSaving}
+									/>
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										disabled={reminderHourSaving}
+										onclick={() => saveReminderHour()}
+									>
+										{reminderHourSaving ? 'Saving…' : 'Save'}
+									</Button>
+								</div>
+							</div>
 						{/if}
 					{/if}
 				</Card.Content>

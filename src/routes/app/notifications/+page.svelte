@@ -1,13 +1,8 @@
 <script>
-	import { Bell, CheckCheck, Trash2 } from '@lucide/svelte';
+	import { Bell, CheckCheck } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import {
-		markAllRead,
-		markRead,
-		notifications,
-		removeNotification
-	} from '$lib/stores/notifications.js';
+	import { markAllRead, markRead, notifications } from '$lib/stores/notifications.js';
 
 	/** @param {string} iso */
 	function formatDate(iso) {
@@ -72,15 +67,6 @@
 								{#if !n.read}
 									<Button variant="ghost" size="sm" onclick={() => markRead(n.id)}>Mark read</Button>
 								{/if}
-								<Button
-									variant="ghost"
-									size="icon"
-									class="text-muted-foreground"
-									aria-label="Remove"
-									onclick={() => removeNotification(n.id)}
-								>
-									<Trash2 class="h-4 w-4" />
-								</Button>
 							</div>
 						</Card.Content>
 					</Card.Root>

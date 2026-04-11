@@ -1,0 +1,10 @@
+# Minimal Supabase CLI config for Edge Functions (see https://supabase.com/docs/guides/functions)
+
+[functions.create-checkout-session]
+verify_jwt = true
+
+[functions.razorpay-webhook]
+verify_jwt = false
+
+[functions.push-reminders]
+verify_jwt = false

@@ -47,7 +47,7 @@ function initialList() {
 				{
 					id: 'welcome-1',
 					title: 'Welcome to Strida',
-					body: 'Your in-app notifications will appear here. Mark them read or clear them anytime.',
+					body: 'Your in-app notifications will appear here. Mark them read when you are done.',
 					createdAt: new Date().toISOString(),
 					read: false
 				}
@@ -97,22 +97,6 @@ export function markAllRead() {
 		persist(next);
 		return next;
 	});
-}
-
-/**
- * @param {string} id
- */
-export function removeNotification(id) {
-	notifications.update((list) => {
-		const next = list.filter((n) => n.id !== id);
-		persist(next);
-		return next;
-	});
-}
-
-export function clearAll() {
-	notifications.set([]);
-	persist([]);
 }
 
 /** @param {Omit<AppNotification, 'read'> & { read?: boolean }} item */

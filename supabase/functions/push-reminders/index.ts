@@ -1,141 +1,266 @@
 /**
  * Supabase Edge Function: push-reminders
- *
- * Sends daily push notifications to users who have incomplete habits for today.
- * Triggered by a cron schedule (e.g., every day at 08:00 UTC).
- *
- * Required secrets (set via `supabase secrets set`):
- *   VAPID_PRIVATE_KEY  - VAPID private key for Web Push
- *   VAPID_PUBLIC_KEY   - VAPID public key
- *   VAPID_SUBJECT      - mailto: or https: URI identifying the sender
- *   FCM_SERVER_KEY     - Firebase Cloud Messaging server key (for Android)
- *
- * Invoke manually for testing:
- *   curl -i --request POST 'https://<project>.supabase.co/functions/v1/push-reminders' \
- *     --header 'Authorization: Bearer <service_role_key>'
+ * Daily habit digest (morning), end-of-day pending list, streak warning, typical-time nudge (web + Android FCM legacy).
  */
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import webpush from 'npm:web-push@3.6.6';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+/** Local hour (0–23) for the once-daily “habits to track today” digest. */
+const MORNING_DIGEST_HOUR = 9;
+
+function localDateInTimeZone(timeZone: string, d = new Date()): string {
+	try {
+		const parts = new Intl.DateTimeFormat('en-CA', {
+			timeZone,
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit'
+		}).formatToParts(d);
+		const y = parts.find((p) => p.type === 'year')?.value;
+		const m = parts.find((p) => p.type === 'month')?.value;
+		const day = parts.find((p) => p.type === 'day')?.value;
+		if (y && m && day) return `${y}-${m}-${day}`;
+	} catch {
+		/* fall through */
+	}
+	return d.toISOString().slice(0, 10);
+}
+
+function localHourInTimeZone(timeZone: string, d = new Date()): number {
+	try {
+		const h = new Intl.DateTimeFormat('en-GB', {
+			timeZone,
+			hour: 'numeric',
+			hour12: false
+		}).formatToParts(d);
+		const hour = h.find((p) => p.type === 'hour')?.value;
+		if (hour != null) return Number.parseInt(hour, 10);
+	} catch {
+		/* fall through */
+	}
+	return d.getUTCHours();
+}
+
+function isPausedOnDay(
+	row: { pause_start: string | null; pause_end: string | null },
+	todayStr: string
+): boolean {
+	if (!row.pause_start || !row.pause_end) return false;
+	return row.pause_start <= todayStr && todayStr <= row.pause_end;
+}
+
+function notPausedFilter(todayStr: string): string {
+	return `pause_start.is.null,pause_end.lt.${todayStr},pause_start.gt.${todayStr}`;
+}
+
+function formatHabitList(titles: string[], max = 5): string {
+	const slice = titles.slice(0, max);
+	const extra = titles.length > max ? ` +${titles.length - max} more` : '';
+	return slice.join(', ') + extra;
+}
+
+function webPushErrorStatus(e: unknown): number | undefined {
+	if (e && typeof e === 'object' && 'statusCode' in e) {
+		const c = (e as { statusCode: unknown }).statusCode;
+		if (typeof c === 'number') return c;
+	}
+	return undefined;
+}
+
 Deno.serve(async (_req) => {
 	try {
+		const vapidSubject = Deno.env.get('VAPID_SUBJECT');
+		const vapidPublic = Deno.env.get('VAPID_PUBLIC_KEY');
+		const vapidPrivate = Deno.env.get('VAPID_PRIVATE_KEY');
+		if (vapidSubject && vapidPublic && vapidPrivate) {
+			webpush.setVapidDetails(vapidSubject, vapidPublic, vapidPrivate);
+		}
+
 		const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-		const todayStr = new Date().toISOString().slice(0, 10);
+		const { data: subscriptions, error: subError } = await supabase.from('PushSubscription').select('*');
 
-		// Find users with active habits that have no completion for today
-		const { data: habits, error: habitsError } = await supabase
-			.from('Habit')
-			.select('user_id, title')
-			.lte('start_date', todayStr)
-			.gte('end_date', todayStr);
-
-		if (habitsError) {
-			return new Response(JSON.stringify({ error: habitsError.message }), { status: 500 });
+		if (subError || !subscriptions?.length) {
+			return new Response(JSON.stringify({ message: 'No subscriptions', sent: 0 }), {
+				headers: { 'Content-Type': 'application/json' }
+			});
 		}
 
-		if (!habits || habits.length === 0) {
-			return new Response(JSON.stringify({ message: 'No active habits today', sent: 0 }));
-		}
+		const userIds = [...new Set(subscriptions.map((s) => s.user_id).filter(Boolean))] as string[];
+		const { data: users } = await supabase
+			.from('User')
+			.select('id, timezone, reminder_hour_local')
+			.in('id', userIds);
 
-		// Find which of these have completions already
-		const habitUserIds = [...new Set(habits.map((h) => h.user_id))];
-
-		const { data: completions } = await supabase
-			.from('HabitCompletion')
-			.select('habit_id, completed')
-			.eq('completion_date', todayStr)
-			.eq('completed', true);
-
-		const completedHabitIds = new Set((completions || []).map((c) => c.habit_id));
-
-		// Group incomplete habits by user
-		const userIncomplete: Record<string, string[]> = {};
-		for (const h of habits) {
-			if (completedHabitIds.has(h.id)) continue;
-			if (!userIncomplete[h.user_id]) userIncomplete[h.user_id] = [];
-			userIncomplete[h.user_id].push(h.title);
-		}
-
-		const userIdsToNotify = Object.keys(userIncomplete);
-		if (userIdsToNotify.length === 0) {
-			return new Response(JSON.stringify({ message: 'All habits completed', sent: 0 }));
-		}
-
-		// Fetch push subscriptions for these users
-		const { data: subscriptions, error: subError } = await supabase
-			.from('PushSubscription')
-			.select('*')
-			.in('user_id', userIdsToNotify);
-
-		if (subError || !subscriptions || subscriptions.length === 0) {
-			return new Response(JSON.stringify({ message: 'No subscriptions to notify', sent: 0 }));
-		}
+		const userMap = new Map((users || []).map((u) => [u.id, u]));
 
 		let sentCount = 0;
 
-		for (const sub of subscriptions) {
-			const titles = userIncomplete[sub.user_id] || [];
-			const count = titles.length;
-			if (count === 0) continue;
+		for (const userId of userIds) {
+			const u = userMap.get(userId);
+			const tz = (u?.timezone && String(u.timezone).trim()) || 'UTC';
+			const todayStr = localDateInTimeZone(tz);
+			const hour = localHourInTimeZone(tz);
+			const reminderHour = u?.reminder_hour_local ?? 20;
 
-			const payload = JSON.stringify({
-				title: `${count} habit${count > 1 ? 's' : ''} waiting`,
-				body: titles.slice(0, 3).join(', ') + (count > 3 ? ` +${count - 3} more` : ''),
-				url: '/app',
-				tag: 'strida-daily-reminder'
+			const { data: habits, error: habitsError } = await supabase
+				.from('Habit')
+				.select('id, user_id, title, current_streak, pause_start, pause_end')
+				.eq('user_id', userId)
+				.lte('start_date', todayStr)
+				.gte('end_date', todayStr)
+				.or(notPausedFilter(todayStr));
+
+			if (habitsError || !habits?.length) continue;
+
+			const active = habits.filter((h) => !isPausedOnDay(h, todayStr));
+			if (!active.length) continue;
+
+			const habitIds = active.map((h) => h.id);
+			const { data: compRows } = await supabase
+				.from('HabitCompletion')
+				.select('habit_id, completed, skipped')
+				.eq('completion_date', todayStr)
+				.in('habit_id', habitIds);
+
+			const incomplete = active.filter((h) => {
+				const r = compRows?.find((c) => c.habit_id === h.id);
+				if (r?.completed) return false;
+				if (r?.skipped) return false;
+				return true;
 			});
 
-			if (sub.platform === 'web') {
-				// Web Push via fetch to the subscription endpoint
-				// Full Web Push protocol requires signing with VAPID keys.
-				// In production use a library like web-push. For now we structure
-				// the call so it can be swapped in.
-				try {
-					const resp = await fetch(sub.endpoint, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: payload
-					});
-					if (resp.ok) sentCount++;
-				} catch {
-					// Subscription may be expired; clean up
-					await supabase.from('PushSubscription').delete().eq('id', sub.id);
-				}
-			} else if (sub.platform === 'android') {
-				const fcmKey = Deno.env.get('FCM_SERVER_KEY');
-				if (!fcmKey) continue;
+			const { data: statsRows } = await supabase
+				.from('habit_stats')
+				.select('habit_id, typical_completion_hour')
+				.in('habit_id', habitIds);
 
-				try {
-					const resp = await fetch('https://fcm.googleapis.com/fcm/send', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `key=${fcmKey}`
-						},
-						body: JSON.stringify({
-							to: sub.endpoint,
-							notification: {
-								title: `${count} habit${count > 1 ? 's' : ''} waiting`,
-								body: titles.slice(0, 3).join(', ') + (count > 3 ? ` +${count - 3} more` : '')
+			const streakSorted = [...incomplete].sort((a, b) => b.current_streak - a.current_streak);
+			const topStreak = streakSorted[0];
+
+			const typicalMatch = incomplete.find((h) => {
+				const s = statsRows?.find((r) => r.habit_id === h.id);
+				const th = s?.typical_completion_hour;
+				if (th == null) return false;
+				return Math.abs(th - hour) <= 1;
+			});
+
+			const activeTitles = active.map((h) => h.title);
+			const incompleteTitles = incomplete.map((h) => h.title);
+
+			const isMorningDigest = hour === MORNING_DIGEST_HOUR && reminderHour !== MORNING_DIGEST_HOUR;
+			const isEodSlot = hour === reminderHour;
+			const skipTypicalSlot = hour === MORNING_DIGEST_HOUR || hour === reminderHour;
+
+			let title = '';
+			let body = '';
+			let tag = 'strida-smart-reminder';
+
+			if (hour === MORNING_DIGEST_HOUR && reminderHour === MORNING_DIGEST_HOUR) {
+				if (incomplete.length) {
+					title = `${incomplete.length} habit${incomplete.length > 1 ? 's' : ''} still pending`;
+					body = formatHabitList(incompleteTitles);
+					tag = 'strida-eod-pending';
+				} else {
+					title = 'Your habits today';
+					body =
+						activeTitles.length === 1
+							? `Track “${activeTitles[0]}” today.`
+							: `${activeTitles.length} habits to track: ${formatHabitList(activeTitles)}.`;
+					tag = 'strida-daily-habits';
+				}
+			} else if (isMorningDigest) {
+				title = 'Your habits today';
+				body =
+					activeTitles.length === 1
+						? `Track “${activeTitles[0]}” today.`
+						: `${activeTitles.length} habits to track: ${formatHabitList(activeTitles)}.`;
+				tag = 'strida-daily-habits';
+			} else if (isEodSlot && incomplete.length) {
+				title = `${incomplete.length} habit${incomplete.length > 1 ? 's' : ''} still pending today`;
+				body = formatHabitList(incompleteTitles, 8);
+				tag = 'strida-eod-pending';
+			} else if (
+				topStreak &&
+				topStreak.current_streak >= 3 &&
+				hour >= 18 &&
+				hour < reminderHour &&
+				incomplete.some((h) => h.id === topStreak.id)
+			) {
+				title = 'Streak at risk';
+				body = `You're about to lose your ${topStreak.current_streak}-day streak on "${topStreak.title}".`;
+				tag = 'strida-streak-warning';
+			} else if (typicalMatch && !skipTypicalSlot) {
+				title = 'Habit nudge';
+				body = `You often check in around this time — "${typicalMatch.title}" is still open.`;
+				tag = 'strida-time-nudge';
+			} else {
+				continue;
+			}
+
+			if (!title) continue;
+
+			const userSubs = subscriptions.filter((s) => s.user_id === userId);
+			for (const sub of userSubs) {
+				const payload = JSON.stringify({
+					title,
+					body,
+					url: '/app',
+					tag
+				});
+
+				if (sub.platform === 'web') {
+					if (!vapidSubject || !vapidPublic || !vapidPrivate) {
+						console.warn('push-reminders: VAPID keys missing; skipping web push');
+						continue;
+					}
+					try {
+						const subscription = {
+							endpoint: sub.endpoint,
+							keys: {
+								p256dh: sub.keys_p256dh,
+								auth: sub.keys_auth
+							}
+						};
+						await webpush.sendNotification(subscription, payload, { TTL: 86_400 });
+						sentCount++;
+					} catch (e) {
+						console.error('web push failed', e);
+						if (webPushErrorStatus(e) === 410) {
+							await supabase.from('PushSubscription').delete().eq('id', sub.id);
+						}
+					}
+				} else if (sub.platform === 'android') {
+					const fcmKey = Deno.env.get('FCM_SERVER_KEY');
+					if (!fcmKey) continue;
+
+					try {
+						const resp = await fetch('https://fcm.googleapis.com/fcm/send', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `key=${fcmKey}`
 							},
-							data: { url: '/app' }
-						})
-					});
-					if (resp.ok) sentCount++;
-				} catch {
-					// token invalid
+							body: JSON.stringify({
+								to: sub.endpoint,
+								notification: { title, body },
+								data: { url: '/app' }
+							})
+						});
+						if (resp.ok) sentCount++;
+					} catch {
+						// token invalid
+					}
 				}
 			}
 		}
 
-		return new Response(
-			JSON.stringify({ message: 'Reminders sent', sent: sentCount }),
-			{ headers: { 'Content-Type': 'application/json' } }
-		);
+		return new Response(JSON.stringify({ message: 'Reminders sent', sent: sentCount }), {
+			headers: { 'Content-Type': 'application/json' }
+		});
 	} catch (err) {
 		return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
 	}

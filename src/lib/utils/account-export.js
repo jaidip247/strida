@@ -34,12 +34,39 @@ export async function buildUserExportPayload(supabase, userId) {
 		habitCompletions = comp || [];
 	}
 
+	let habitLogs = [];
+	let habitStatsRows = [];
+
+	const { data: logs, error: logsError } = await supabase
+		.from('habit_logs')
+		.select('*')
+		.eq('user_id', userId)
+		.order('created_at', { ascending: false })
+		.limit(5000);
+
+	if (logsError && !String(logsError.message || '').includes('does not exist')) {
+		throw logsError;
+	}
+	habitLogs = logs || [];
+
+	const { data: stats, error: statsError } = await supabase
+		.from('habit_stats')
+		.select('*')
+		.eq('user_id', userId);
+
+	if (statsError && !String(statsError.message || '').includes('does not exist')) {
+		throw statsError;
+	}
+	habitStatsRows = stats || [];
+
 	return {
 		exportFormatVersion: 1,
 		exportedAt: new Date().toISOString(),
 		profile: profile || null,
 		habits: habits || [],
-		habitCompletions
+		habitCompletions,
+		habitLogs,
+		habitStats: habitStatsRows
 	};
 }
 

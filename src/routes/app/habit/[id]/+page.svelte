@@ -8,7 +8,7 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
-	import { CalendarIcon, ArrowLeft, Trash2 } from '@lucide/svelte';
+	import { CalendarIcon, ArrowLeft, Flame, Trash2 } from '@lucide/svelte';
 	import { CalendarDate, parseDate } from '@internationalized/date';
 	import { createClient } from '$lib/supabase/client';
 	import { goto } from '$app/navigation';
@@ -35,6 +35,10 @@
 	// Analytics state
 	let completions = $state([]);
 	let analyticsLoading = $state(true);
+	let streakStats = $state({ current_streak: 0, best_streak: 0, last_completed_date: null });
+	let pauseStart = $state(/** @type {string | null} */ (null));
+	let pauseEnd = $state(/** @type {string | null} */ (null));
+	let pauseBusy = $state(false);
 
 	function getLocalDateString(date = new Date()) {
 		const year = date.getFullYear();
@@ -67,46 +71,21 @@
 
 	const endDate = $derived(calculateEndDate(tracking.start_date, tracking.duration_days));
 
+	const pauseActive = $derived.by(() => {
+		if (!pauseStart || !pauseEnd) return false;
+		const t = getLocalDateString();
+		return pauseStart <= t && t <= pauseEnd;
+	});
+
 	// --- Analytics computations ---
 	const today = $derived(getLocalDateString());
 
-	const currentStreak = $derived.by(() => {
-		const completedDates = new Set(
-			completions.filter((c) => c.completed).map((c) => c.completion_date?.slice(0, 10))
-		);
-		let streak = 0;
-		let cursor = today;
-		while (completedDates.has(cursor)) {
-			streak++;
-			const [y, m, d] = cursor.split('-').map(Number);
-			const prev = new Date(Date.UTC(y, m - 1, d));
-			prev.setUTCDate(prev.getUTCDate() - 1);
-			cursor = `${prev.getUTCFullYear()}-${String(prev.getUTCMonth() + 1).padStart(2, '0')}-${String(prev.getUTCDate()).padStart(2, '0')}`;
-		}
-		return streak;
-	});
-
-	const longestStreak = $derived.by(() => {
-		const sorted = completions
-			.filter((c) => c.completed)
-			.map((c) => c.completion_date?.slice(0, 10))
-			.sort();
-		if (sorted.length === 0) return 0;
-		let max = 1;
-		let current = 1;
-		for (let i = 1; i < sorted.length; i++) {
-			const prev = new Date(sorted[i - 1] + 'T00:00:00Z');
-			const curr = new Date(sorted[i] + 'T00:00:00Z');
-			const diff = (curr.getTime() - prev.getTime()) / (24 * 60 * 60 * 1000);
-			if (diff === 1) {
-				current++;
-				if (current > max) max = current;
-			} else if (diff > 1) {
-				current = 1;
-			}
-		}
-		return max;
-	});
+	function addDaysLocalDateStr(isoStr, deltaDays) {
+		const [y, m, d] = isoStr.split('-').map(Number);
+		const dt = new Date(y, m - 1, d);
+		dt.setDate(dt.getDate() + deltaDays);
+		return getLocalDateString(dt);
+	}
 
 	const completionRate = $derived.by(() => {
 		if (!tracking.start_date) return 0;
@@ -191,6 +170,17 @@
 			duration_days: habitData.duration_days || 21
 		};
 
+		streakStats = {
+			current_streak: habitData.current_streak ?? 0,
+			best_streak: habitData.best_streak ?? 0,
+			last_completed_date: habitData.last_completed_date
+				? habitData.last_completed_date.slice(0, 10)
+				: null
+		};
+
+		pauseStart = habitData.pause_start ? habitData.pause_start.slice(0, 10) : null;
+		pauseEnd = habitData.pause_end ? habitData.pause_end.slice(0, 10) : null;
+
 		try {
 			calendarDate = parseDate(tracking.start_date);
 		} catch {
@@ -203,7 +193,7 @@
 		// Load completions for analytics
 		const { data: compData } = await supabase
 			.from('HabitCompletion')
-			.select('completion_date, completed')
+			.select('completion_date, completed, skipped')
 			.eq('habit_id', habitId);
 
 		completions = compData || [];
@@ -253,6 +243,23 @@
 
 			if (updateError) throw updateError;
 
+			const { data: streakRow } = await supabase
+				.from('Habit')
+				.select('current_streak, best_streak, last_completed_date')
+				.eq('id', habitId)
+				.eq('user_id', user.id)
+				.single();
+
+			if (streakRow) {
+				streakStats = {
+					current_streak: streakRow.current_streak ?? 0,
+					best_streak: streakRow.best_streak ?? 0,
+					last_completed_date: streakRow.last_completed_date
+						? streakRow.last_completed_date.slice(0, 10)
+						: null
+				};
+			}
+
 			success = true;
 			toast.success('Habit updated successfully');
 			setTimeout(() => {
@@ -262,6 +269,84 @@
 			error = e.message || 'Failed to update habit';
 		} finally {
 			saving = false;
+		}
+	}
+
+	async function applyPause(days) {
+		if (!user) return;
+		pauseBusy = true;
+		try {
+			const start = getLocalDateString();
+			const end = addDaysLocalDateStr(start, days - 1);
+			const { error } = await supabase
+				.from('Habit')
+				.update({
+					pause_start: start,
+					pause_end: end,
+					updated_at: new Date().toISOString()
+				})
+				.eq('id', habitId)
+				.eq('user_id', user.id);
+			if (error) throw error;
+			pauseStart = start;
+			pauseEnd = end;
+			const { data: streakRow } = await supabase
+				.from('Habit')
+				.select('current_streak, best_streak, last_completed_date')
+				.eq('id', habitId)
+				.single();
+			if (streakRow) {
+				streakStats = {
+					current_streak: streakRow.current_streak ?? 0,
+					best_streak: streakRow.best_streak ?? 0,
+					last_completed_date: streakRow.last_completed_date
+						? streakRow.last_completed_date.slice(0, 10)
+						: null
+				};
+			}
+			toast.success(`Paused until ${end}`);
+		} catch (e) {
+			toast.error(e?.message || 'Could not pause');
+		} finally {
+			pauseBusy = false;
+		}
+	}
+
+	async function resumeHabit() {
+		if (!user) return;
+		pauseBusy = true;
+		try {
+			const { error } = await supabase
+				.from('Habit')
+				.update({
+					pause_start: null,
+					pause_end: null,
+					updated_at: new Date().toISOString()
+				})
+				.eq('id', habitId)
+				.eq('user_id', user.id);
+			if (error) throw error;
+			pauseStart = null;
+			pauseEnd = null;
+			const { data: streakRow } = await supabase
+				.from('Habit')
+				.select('current_streak, best_streak, last_completed_date')
+				.eq('id', habitId)
+				.single();
+			if (streakRow) {
+				streakStats = {
+					current_streak: streakRow.current_streak ?? 0,
+					best_streak: streakRow.best_streak ?? 0,
+					last_completed_date: streakRow.last_completed_date
+						? streakRow.last_completed_date.slice(0, 10)
+						: null
+				};
+			}
+			toast.success('Habit resumed');
+		} catch (e) {
+			toast.error(e?.message || 'Could not resume');
+		} finally {
+			pauseBusy = false;
 		}
 	}
 
@@ -332,11 +417,14 @@
 							<div class="stats-grid">
 								<div class="stat-card">
 									<span class="stat-label">Current streak</span>
-									<span class="stat-value metric">{currentStreak}d</span>
+									<span class="stat-value metric streak-stat">
+										<Flame class="h-4 w-4" aria-hidden="true" />
+										{streakStats.current_streak}d
+									</span>
 								</div>
 								<div class="stat-card">
-									<span class="stat-label">Longest streak</span>
-									<span class="stat-value metric">{longestStreak}d</span>
+									<span class="stat-label">Best streak</span>
+									<span class="stat-value metric">{streakStats.best_streak}d</span>
 								</div>
 								<div class="stat-card">
 									<span class="stat-label">Completion rate</span>
@@ -364,6 +452,62 @@
 									</div>
 								</div>
 							{/if}
+						{/if}
+					</Card.Content>
+				</Card.Root>
+
+				<Card.Root class="surface-card border-0 shadow-none mb-4">
+					<Card.Header>
+						<Card.Title>Pause</Card.Title>
+						<Card.Description>
+							Hide this habit from Today while paused. Paused days don’t count as missed for streaks.
+						</Card.Description>
+					</Card.Header>
+					<Card.Content class="space-y-3">
+						{#if pauseActive}
+							<p class="text-sm text-muted-foreground">
+								Paused through <strong class="text-foreground">{pauseEnd}</strong>.
+							</p>
+							<Button
+								type="button"
+								variant="outline"
+								size="sm"
+								disabled={pauseBusy}
+								onclick={() => resumeHabit()}
+							>
+								{pauseBusy ? '…' : 'Resume now'}
+							</Button>
+						{:else}
+							<p class="text-sm text-muted-foreground">Quick pause (inclusive dates).</p>
+							<div class="flex flex-wrap gap-2">
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={pauseBusy}
+									onclick={() => applyPause(3)}
+								>
+									3 days
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={pauseBusy}
+									onclick={() => applyPause(7)}
+								>
+									7 days
+								</Button>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									disabled={pauseBusy}
+									onclick={() => applyPause(14)}
+								>
+									14 days
+								</Button>
+							</div>
 						{/if}
 					</Card.Content>
 				</Card.Root>
@@ -606,6 +750,12 @@
 		font-size: 1.2rem;
 		font-weight: 700;
 		color: var(--ink);
+	}
+
+	.streak-stat {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.25rem;
 	}
 
 	.trend-section {

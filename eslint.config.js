@@ -11,6 +11,9 @@ const gitignorePath = fileURLToPath(new URL('./.gitignore', import.meta.url));
 /** @type {import('eslint').Linter.Config[]} */
 export default [
 	includeIgnoreFile(gitignorePath),
+	{
+		ignores: ['android/app/src/main/assets/**']
+	},
 	js.configs.recommended,
 	...svelte.configs.recommended,
 	prettier,

@@ -1,72 +1,90 @@
 <script>
 	import './landing-marketing.css';
-	import { Button } from '$lib/components/ui/button/index.js';
-	import { Input } from '$lib/components/ui/input/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Switch } from '$lib/components/ui/switch/index.js';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import * as Select from '$lib/components/ui/select/index.js';
+	/* eslint-disable svelte/no-navigation-without-resolve */
 	import {
 		CheckCircle2,
-		Target,
-		TrendingUp,
-		Sparkles,
-		Calendar,
-		BarChart3,
-		Users,
 		ArrowRight,
-		ChevronDown,
-		Repeat,
+		Brain,
+		HeartHandshake,
+		RefreshCcw,
+		Shield,
+		Sparkles,
+		Stethoscope,
+		Sunrise,
 		Bell,
-		ShieldCheck
+		TrendingUp,
+		ChevronDown,
+		MoonStar
 	} from '@lucide/svelte';
 
-	let email = $state('');
-	let isSubmitting = $state(false);
-	let submitted = $state(false);
 	let openFaq = $state(null);
 
-	let demoCadence = $state('daily');
-	let demoReminders = $state(true);
-	let demoHabitName = $state('Morning walk');
-	let demoConfirm = $state(true);
-
-	const features = [
+	const painPoints = [
 		{
-			icon: Target,
-			title: 'Track Your Habits',
-			description:
-				'Easily track your daily habits with our intuitive interface. Set goals and monitor your progress over time.'
+			title: 'All-or-nothing streak pressure',
+			body: 'Missing one day can make you feel like you failed — even when you’re doing better than before.'
 		},
 		{
-			icon: TrendingUp,
-			title: 'Visual Progress',
-			description:
-				'See your progress with beautiful charts and statistics. Understand your patterns and celebrate your wins.'
+			title: 'No guidance when life happens',
+			body: 'Travel, sickness, long work weeks… most trackers don’t help you adjust — they just log the miss.'
+		},
+		{
+			title: 'You don’t know what to do next',
+			body: 'A list of habits isn’t a plan. Coaching is about turning “I should” into a doable next step.'
+		}
+	];
+
+	const coachingLoop = [
+		{
+			icon: HeartHandshake,
+			title: 'Make it gentle',
+			body: 'Define the smallest version that still counts. If you can do it on a bad day, it’s sustainable.'
+		},
+		{
+			icon: RefreshCcw,
+			title: 'Track reality (not perfection)',
+			body: 'Done, skip, or sick — so your plan stays honest and your streak doesn’t become a guilt trap.'
+		},
+		{
+			icon: Brain,
+			title: 'Learn patterns and adjust',
+			body: 'Strida surfaces what’s working and what isn’t — then nudges you toward the next best action.'
+		}
+	];
+
+	const principles = [
+		{
+			icon: Shield,
+			title: 'Evidence-based structure',
+			body: 'The flow is built around behavior change research — clarity, consistency, and feedback loops.'
 		},
 		{
 			icon: Sparkles,
-			title: 'Smart Tips & Tricks',
-			description:
-				'Get personalized tips and tricks to help you stick to your habits. Learn from experts and build lasting routines.'
+			title: 'Motivation without the hype',
+			body: 'Coaching should feel calm and practical — not like a productivity sermon.'
 		},
 		{
-			icon: Calendar,
-			title: 'Flexible Scheduling',
-			description:
-				'Set custom schedules for your habits. Daily, weekly, or custom intervals - whatever works for you.'
+			icon: TrendingUp,
+			title: 'Progress you can see',
+			body: 'Wins, misses, and rest days all teach you something. Strida helps you notice and adapt.'
+		}
+	];
+
+	const insightExamples = [
+		{
+			title: 'Pattern',
+			body: 'You’re most consistent on days you start before 10am.',
+			icon: Sunrise
 		},
 		{
-			icon: BarChart3,
-			title: 'Detailed Analytics',
-			description:
-				'Dive deep into your habit data. Understand your streaks, success rates, and areas for improvement.'
+			title: 'Nudge',
+			body: 'Tonight: 2 habits are still open. Want a smaller “minimum” for low-energy days?',
+			icon: Bell
 		},
 		{
-			icon: Users,
-			title: 'Community Support',
-			description:
-				'Join a community of habit builders. Share your journey and get inspired by others.'
+			title: 'Adjustment',
+			body: 'Your habit fails most after late nights. Try a shorter version on those days.',
+			icon: MoonStar
 		}
 	];
 
@@ -75,15 +93,9 @@
 			name: 'Free',
 			price: '$0',
 			period: 'forever',
-			description: 'Perfect for getting started',
-			features: [
-				'Track up to 5 habits',
-				'Basic progress tracking',
-				'Weekly tips & tricks',
-				'Mobile app access',
-				'Community support'
-			],
-			cta: 'Get Started',
+			description: 'Start gently and build consistency',
+			features: ['Up to 2 habits', 'Today view + basic progress', 'Reminders', 'Web + Android app'],
+			cta: 'Start free',
 			popular: false,
 			href: '/register'
 		},
@@ -91,17 +103,15 @@
 			name: 'Pro',
 			price: '$9.99',
 			period: 'per month',
-			description: 'For serious habit builders',
+			description: 'Deeper insights and flexible programs',
 			features: [
 				'Unlimited habits',
-				'Advanced analytics',
-				'Daily personalized tips',
-				'Priority support',
+				'Full insights + analytics',
+				'Custom habit durations',
 				'Export your data',
-				'Custom reminders',
-				'Streak recovery'
+				'Reminders'
 			],
-			cta: 'Start Free Trial',
+			cta: 'Upgrade to Pro',
 			popular: true,
 			href: '/register'
 		}
@@ -109,65 +119,47 @@
 
 	const faqs = [
 		{
-			question: 'How does Strida help me build habits?',
+			question: 'What happens when I miss a day?',
 			answer:
-				'Strida provides a comprehensive platform to track your habits, monitor your progress, and receive personalized tips and tricks. Our app uses proven behavioral science principles to help you build lasting habits through consistent tracking, visual feedback, and smart reminders.'
+				'Strida is designed for restarts. Instead of treating a miss like failure, you can log a skip or sick day so your habit plan stays realistic and you keep momentum.'
 		},
 		{
-			question: 'What kind of tips and tricks do you provide?',
+			question: 'What is skip / sick mode?',
 			answer:
-				'We provide personalized tips based on your habit patterns, success rates, and goals. These include strategies for overcoming common obstacles, motivation techniques, habit stacking ideas, and evidence-based methods from behavioral psychology to help you maintain consistency.'
+				'If you can’t do a habit because of sickness or life constraints, you can mark it as skipped/sick for the day. The point is to reduce mental load and stop “perfect streaks” from becoming pressure.'
 		},
 		{
-			question: 'Can I use Strida for multiple habits?',
+			question: 'How do AI insights work?',
 			answer:
-				'Yes! The free plan allows you to track up to 5 habits, while Pro offers unlimited habit tracking. You can organize habits by category, set different schedules, and track them all in one place.'
+				'Strida looks for patterns in your check-ins (like time-of-day consistency or common failure windows) and turns them into practical suggestions and gentle nudges. It’s there to help you adjust — not to judge you.'
+		},
+		{
+			question: 'Is Strida therapy?',
+			answer:
+				'No. Strida provides educational, behavior-focused guidance and tools. It is not medical advice, diagnosis, or treatment.'
+		},
+		{
+			question: 'Will I get spammed with notifications?',
+			answer:
+				'No. Reminders are designed to be calm and useful: a morning habit list and an end-of-day “what’s still open” reminder, with optional nudges you can control.'
 		},
 		{
 			question: 'Is there a mobile app?',
 			answer:
-				"Yes, Strida is available on both iOS and Android. You can sync your data across all your devices, so you can track your habits whether you're at home or on the go."
-		},
-		{
-			question: 'How do I cancel my subscription?',
-			answer:
-				"You can cancel your subscription at any time from your account settings. There are no cancellation fees, and you'll continue to have access to Pro features until the end of your billing period."
-		},
-		{
-			question: 'Do you offer refunds?',
-			answer:
-				"We offer a 30-day money-back guarantee for all paid plans. If you're not satisfied with Strida, contact our support team within 30 days of your purchase for a full refund."
+				'Yes. Your account works on the web and in the Android app (built with Capacitor).'
 		}
 	];
 
 	function toggleFaq(index) {
 		openFaq = openFaq === index ? null : index;
 	}
-
-	async function handleNewsletterSubmit(e) {
-		e.preventDefault();
-		isSubmitting = true;
-		await new Promise((resolve) => setTimeout(resolve, 1000));
-		submitted = true;
-		isSubmitting = false;
-		email = '';
-		setTimeout(() => {
-			submitted = false;
-		}, 3000);
-	}
 </script>
 
 <svelte:head>
-	<title>Strida — Build better habits, one day at a time</title>
+	<title>Strida — a gentle habit coach</title>
 	<meta
 		name="description"
-		content="Strida helps you build lasting habits with smart tracking, personalized tips, and beautiful progress visualization."
-	/>
-	<link rel="preconnect" href="https://fonts.googleapis.com" />
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
-	<link
-		href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&display=swap"
-		rel="stylesheet"
+		content="Strida is a gentle habit coach: evidence-based guidance, flexible skip/sick days, and AI insights that help you restart without guilt."
 	/>
 </svelte:head>
 
@@ -176,18 +168,18 @@
 		<div class="lp-container lp-nav-inner">
 			<a href="/" class="lp-brand">Strida</a>
 			<nav class="lp-nav-links" aria-label="Primary">
-				<a href="#features">Features</a>
-				<a href="#pricing">Pricing</a>
-				<a href="#faq">Help</a>
-			</nav>
-			<nav class="lp-nav-links-mobile" aria-label="Primary mobile">
-				<a href="#features">Features</a>
+				<a href="#how">How it works</a>
+				<a href="#science">Science</a>
+				<a href="#ai">AI insights</a>
 				<a href="#pricing">Pricing</a>
 				<a href="#faq">Help</a>
 			</nav>
 			<div class="lp-nav-actions">
 				<a href="/login" class="lp-btn-pill lp-btn-pill--ghost">Login</a>
-				<a href="/register" class="lp-btn-pill lp-btn-pill--dark">Sign up for free</a>
+				<a href="/register" class="lp-btn-pill lp-btn-pill--dark">
+					<span class="lp-nav-cta-full">Sign up for free</span>
+					<span class="lp-nav-cta-short">Sign up</span>
+				</a>
 			</div>
 		</div>
 	</header>
@@ -206,90 +198,189 @@
 			</div>
 			<div class="lp-container">
 				<div class="lp-hero-inner">
-					<h1 id="hero-heading">Show up every day.</h1>
+					<p class="lp-eyebrow">A habit coach for real life</p>
+					<h1 id="hero-heading">Restart without guilt.</h1>
 					<p class="lp-hero-lead">
-						A calm habit system for people who want progress without the pressure. Track, reflect, and
-						keep going.
+						Strida helps you build better habits with evidence-based structure, flexible skip/sick days,
+						and AI insights that turn “I should” into a doable next step.
 					</p>
 					<div class="lp-hero-cta">
 						<a href="/register" class="lp-btn-pill lp-btn-pill--dark">
-							Become the first to know
+							Sign up free
 							<ArrowRight class="h-4 w-4" aria-hidden="true" />
 						</a>
+						<a href="#how" class="lp-btn-pill lp-btn-pill--ghost">See how it works</a>
 					</div>
+					<ul class="lp-hero-badges" aria-label="What you get">
+						<li><CheckCircle2 class="h-4 w-4" aria-hidden="true" /> Skip/sick days reduce pressure</li>
+						<li><CheckCircle2 class="h-4 w-4" aria-hidden="true" /> Daily reminders that help (not spam)</li>
+						<li><CheckCircle2 class="h-4 w-4" aria-hidden="true" /> Coaching loop built on research</li>
+					</ul>
 				</div>
 			</div>
 		</section>
 
-		<section class="lp-logos" aria-label="Trusted by teams">
-			<div class="lp-container">
-				<div class="lp-logos-row">
-					<img src="/landing/logo-1.svg" alt="" />
-					<img src="/landing/logo-2.svg" alt="" />
-					<img src="/landing/logo-3.svg" alt="" />
-					<img src="/landing/logo-4.svg" alt="" />
-					<img src="/landing/logo-5.svg" alt="" />
-					<img src="/landing/logo-6.svg" alt="" />
-				</div>
-			</div>
-		</section>
-
-		<section class="lp-value">
+		<section class="lp-value" aria-labelledby="value-heading">
 			<div class="lp-container">
 				<div class="lp-value-head">
-					<h2>We help you stay consistent—clearer, kinder, and easier than a spreadsheet.</h2>
+					<h2 id="value-heading">Most habit apps track. Strida coaches.</h2>
 					<p>
-						See today’s habits, your streaks, and what’s next. Built for real life: missed days, travel,
-						and busy weeks.
+						If you’re tired of streak pressure, Strida helps you restart gently and build a system that
+						holds up on low-energy days — not just your best days.
 					</p>
 				</div>
-				<div class="lp-preview-wrap">
-					<div class="lp-mock lp-mock--back" aria-hidden="true">
-						<img src="/landing/mockup-a.svg" alt="" />
-					</div>
-					<div class="lp-mock lp-mock--front" aria-hidden="true">
-						<img src="/landing/mockup-b.svg" alt="" />
-					</div>
-					<div class="lp-sticky">Don’t break the chain! — you’ve got this</div>
-				</div>
-			</div>
-		</section>
-
-		<section id="features" class="lp-section lp-section--muted">
-			<div class="lp-container">
-				<div class="lp-section-head">
-					<h2>Everything you need to keep momentum</h2>
-					<p>Tracking, insights, and gentle structure—without turning life into a dashboard.</p>
-				</div>
-				<div class="lp-feature-grid">
-					{#each features as feature}
-						{@const Icon = feature.icon}
-						<div class="lp-demo-cell">
-							<div class="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-600">
-								<Icon class="h-4 w-4" aria-hidden="true" />
-							</div>
-							<div>
-								<h3 class="text-base font-semibold text-neutral-950">{feature.title}</h3>
-								<p class="mt-1 text-sm leading-relaxed text-neutral-600">{feature.description}</p>
-							</div>
+				<div class="lp-cards-3" aria-label="Common pain points">
+					{#each painPoints as item (item.title)}
+						<div class="lp-card">
+							<h3>{item.title}</h3>
+							<p>{item.body}</p>
 						</div>
 					{/each}
 				</div>
 			</div>
 		</section>
 
-		<section id="pricing" class="lp-section">
+		<section id="how" class="lp-section lp-section--muted" aria-labelledby="how-heading">
 			<div class="lp-container">
 				<div class="lp-section-head">
-					<h2>With simple pricing</h2>
+					<h2 id="how-heading">How Strida coaches your habit</h2>
+					<p>A simple loop that makes consistency easier to repeat.</p>
+				</div>
+				<div class="lp-feature-grid">
+					{#each coachingLoop as step (step.title)}
+						{@const Icon = step.icon}
+						<div class="lp-demo-cell lp-demo-cell--coach">
+							<div class="lp-icon-badge" aria-hidden="true">
+								<Icon class="h-4 w-4" />
+							</div>
+							<div>
+								<h3 class="text-base font-semibold">{step.title}</h3>
+								<p class="mt-1 text-sm leading-relaxed">{step.body}</p>
+							</div>
+						</div>
+					{/each}
+				</div>
+				<div class="lp-section-cta">
+					<a href="/register" class="lp-btn-pill lp-btn-pill--dark inline-flex">
+						Start with one habit
+						<ArrowRight class="h-4 w-4" aria-hidden="true" />
+					</a>
+				</div>
+			</div>
+		</section>
+
+		<section id="science" class="lp-section" aria-labelledby="science-heading">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2 id="science-heading">Built on proven behavior science</h2>
+					<p>Structure, feedback loops, and compassion — without overpromising.</p>
+				</div>
+				<div class="lp-feature-grid lp-feature-grid--two">
+					{#each principles as p (p.title)}
+						{@const Icon = p.icon}
+						<div class="lp-demo-cell lp-demo-cell--coach">
+							<div class="lp-icon-badge" aria-hidden="true">
+								<Icon class="h-4 w-4" />
+							</div>
+							<div>
+								<h3 class="text-base font-semibold">{p.title}</h3>
+								<p class="mt-1 text-sm leading-relaxed">{p.body}</p>
+							</div>
+						</div>
+					{/each}
+				</div>
+				<p class="lp-disclaimer" role="note">
+					<Stethoscope class="h-4 w-4" aria-hidden="true" />
+					<span>Strida provides educational guidance — not medical advice, diagnosis, or treatment.</span>
+				</p>
+			</div>
+		</section>
+
+		<section id="ai" class="lp-section lp-section--muted" aria-labelledby="ai-heading">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2 id="ai-heading">AI insights that feel human</h2>
+					<p>
+						Your data tells a story. Strida’s behavior analysis engine finds patterns and suggests
+						adjustments — so you can keep going even when motivation dips.
+					</p>
+				</div>
+				<div class="lp-insight-grid" aria-label="Example insights">
+					{#each insightExamples as ex (ex.title)}
+						{@const Icon = ex.icon}
+						<div class="lp-insight-card">
+							<div class="lp-insight-top">
+								<span class="lp-insight-chip">{ex.title}</span>
+								<span class="lp-insight-icon" aria-hidden="true"><Icon class="h-4 w-4" /></span>
+							</div>
+							<p class="lp-insight-body">{ex.body}</p>
+						</div>
+					{/each}
+				</div>
+			</div>
+		</section>
+
+		<section class="lp-section" aria-labelledby="skip-heading">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2 id="skip-heading">Skip / sick mode lowers the mental load</h2>
+					<p>Because building habits shouldn’t punish you for being human.</p>
+				</div>
+				<div class="lp-skip-grid">
+					<div class="lp-skip-card">
+						<div class="lp-icon-badge" aria-hidden="true"><Stethoscope class="h-4 w-4" /></div>
+						<h3>Sick happens</h3>
+						<p>Mark it sick, reduce pressure, and resume when you’re better — without spiraling.</p>
+					</div>
+					<div class="lp-skip-card">
+						<div class="lp-icon-badge" aria-hidden="true"><RefreshCcw class="h-4 w-4" /></div>
+						<h3>Skips are information</h3>
+						<p>Skips show you friction. Strida helps you adjust the habit to fit your life.</p>
+					</div>
+					<div class="lp-skip-card">
+						<div class="lp-icon-badge" aria-hidden="true"><HeartHandshake class="h-4 w-4" /></div>
+						<h3>Consistency over perfection</h3>
+						<p>A plan you can restart is the plan you can keep.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="lp-section lp-section--muted" aria-labelledby="reminders-heading">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2 id="reminders-heading">Reminders that help you follow through</h2>
+					<p>Two calm touchpoints, plus optional nudges — on your terms.</p>
+				</div>
+				<div class="lp-reminder-grid">
+					<div class="lp-reminder-card">
+						<div class="lp-reminder-title">
+							<Sunrise class="h-4 w-4" aria-hidden="true" />
+							<span>Morning digest</span>
+						</div>
+						<p>Start the day with a simple list of what you’re tracking today.</p>
+					</div>
+					<div class="lp-reminder-card">
+						<div class="lp-reminder-title">
+							<Bell class="h-4 w-4" aria-hidden="true" />
+							<span>End-of-day pending</span>
+						</div>
+						<p>Before your day ends, get a reminder of habits still not marked done.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section id="pricing" class="lp-section" aria-labelledby="pricing-heading">
+			<div class="lp-container">
+				<div class="lp-section-head">
+					<h2 id="pricing-heading">Simple pricing</h2>
 					<p>Start free. Upgrade when you want deeper analytics and unlimited habits.</p>
 				</div>
 				<div class="lp-pricing-grid">
-					{#each pricingPlans as plan}
-						<div
-							class="lp-price-card {plan.popular ? 'lp-price-card--popular' : ''}"
-						>
-							<h3 class="text-lg font-semibold text-neutral-950">{plan.name}</h3>
+					{#each pricingPlans as plan (plan.name)}
+						<div class="lp-price-card {plan.popular ? 'lp-price-card--popular' : ''}">
+							<h3 class="text-lg font-semibold">{plan.name}</h3>
 							<p class="mt-1 text-sm text-neutral-600">{plan.description}</p>
 							<div class="mt-4">
 								<span class="lp-price-tag">{plan.price}</span>
@@ -303,10 +394,7 @@
 									</li>
 								{/each}
 							</ul>
-							<a
-								href={plan.href}
-								class="lp-btn-pill lp-btn-pill--dark w-full text-center"
-							>
+							<a href={plan.href} class="lp-btn-pill lp-btn-pill--dark w-full text-center">
 								{plan.cta}
 							</a>
 						</div>
@@ -315,138 +403,14 @@
 			</div>
 		</section>
 
-		<section class="lp-section lp-section--muted" aria-labelledby="flex-heading">
-			<div class="lp-container">
-				<div class="lp-section-head">
-					<h2 id="flex-heading">What makes Strida flexible?</h2>
-					<p>
-						You decide how often a habit counts, how you get nudged, and what “done” means—so the app
-						adapts to travel, shift work, or low-energy weeks instead of punishing them.
-					</p>
-				</div>
-				<ul class="lp-flex-points" aria-label="How flexibility shows up in the app">
-					<li>
-						<span class="lp-flex-point-icon" aria-hidden="true"><Repeat class="h-5 w-5" /></span>
-						<div>
-							<strong>Schedule that matches reality</strong>
-							<span>Daily, weekdays-only, or weekly—repeat rules live on each habit, not in a rigid template.</span>
-						</div>
-					</li>
-					<li>
-						<span class="lp-flex-point-icon" aria-hidden="true"><Bell class="h-5 w-5" /></span>
-						<div>
-							<strong>Reminders on your terms</strong>
-							<span>Turn pushes on or off per habit so you get signal without notification fatigue.</span>
-						</div>
-					</li>
-					<li>
-						<span class="lp-flex-point-icon" aria-hidden="true"><ShieldCheck class="h-5 w-5" /></span>
-						<div>
-							<strong>Intentional completions</strong>
-							<span>Optional confirmation catches accidental taps—useful for habits you want to log mindfully.</span>
-						</div>
-					</li>
-				</ul>
-				<p class="lp-flex-demo-caption">Try the same controls you’ll use after sign-up:</p>
-				<div class="lp-demo-grid">
-					<div class="lp-demo-cell">
-						<span class="lp-demo-label">Cadence</span>
-						<p class="lp-demo-hint">How often this habit should appear on your list.</p>
-						<Label for="lp-demo-select" class="sr-only">Repeat</Label>
-						<Select.Root type="single" bind:value={demoCadence}>
-							<Select.Trigger id="lp-demo-select" class="w-full max-w-none justify-between">
-								<span data-slot="select-value">
-									{demoCadence === 'daily'
-										? 'Every day'
-										: demoCadence === 'weekdays'
-											? 'Weekdays'
-											: 'Weekly'}
-								</span>
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Item value="daily" label="Every day">Every day</Select.Item>
-								<Select.Item value="weekdays" label="Weekdays">Weekdays</Select.Item>
-								<Select.Item value="weekly" label="Weekly">Weekly</Select.Item>
-							</Select.Content>
-						</Select.Root>
-					</div>
-					<div class="lp-demo-cell">
-						<span class="lp-demo-label">Reminders</span>
-						<p class="lp-demo-hint">Gentle nudges when you want them—not a firehose.</p>
-						<div class="flex flex-1 items-center justify-between gap-2">
-							<span class="text-sm text-neutral-700">Push notifications</span>
-							<Switch bind:checked={demoReminders} aria-label="Toggle reminders demo" />
-						</div>
-					</div>
-					<div class="lp-demo-cell">
-						<span class="lp-demo-label">Habit name</span>
-						<p class="lp-demo-hint">Name it so your future self knows exactly what to do.</p>
-						<Input bind:value={demoHabitName} placeholder="e.g. Read 10 pages" class="w-full" />
-					</div>
-					<div class="lp-demo-cell">
-						<span class="lp-demo-label">Safety</span>
-						<p class="lp-demo-hint">Extra tap so a streak isn’t broken by mistake.</p>
-						<div class="flex flex-1 items-center gap-2 pt-1">
-							<Checkbox id="lp-demo-confirm" bind:checked={demoConfirm} />
-							<Label for="lp-demo-confirm" class="text-sm font-normal text-neutral-700">
-								Confirm before completing
-							</Label>
-						</div>
-					</div>
-				</div>
-				<div class="mt-10 text-center">
-					<a href="/register" class="lp-btn-pill lp-btn-pill--dark inline-flex">
-						Get started
-						<ArrowRight class="h-4 w-4" aria-hidden="true" />
-					</a>
-				</div>
-			</div>
-		</section>
-
-		<section class="lp-section">
-			<div class="lp-container">
-				<div class="lp-section-head">
-					<h2>Stay in the loop</h2>
-					<p>One practical note on habits when we have something worth sharing. No spam.</p>
-				</div>
-				<div class="lp-newsletter">
-					{#if submitted}
-						<div class="flex flex-col items-center gap-2 py-4 text-center">
-							<CheckCircle2 class="h-10 w-10 text-emerald-600" aria-hidden="true" />
-							<p class="font-medium text-neutral-900">Thanks! We’ll be in touch.</p>
-						</div>
-					{:else}
-						<form class="lp-newsletter-form" onsubmit={handleNewsletterSubmit}>
-							<label for="newsletter-email" class="text-sm font-medium text-neutral-700"
-								>Email</label
-							>
-							<div class="lp-newsletter-row">
-								<Input
-									id="newsletter-email"
-									type="email"
-									placeholder="you@example.com"
-									required
-									class="min-h-11 flex-1"
-									bind:value={email}
-								/>
-								<Button type="submit" class="rounded-full px-6" disabled={isSubmitting}>
-									{isSubmitting ? 'Sending…' : 'Subscribe'}
-								</Button>
-							</div>
-						</form>
-					{/if}
-				</div>
-			</div>
-		</section>
-
 		<section id="faq" class="lp-section lp-section--muted">
 			<div class="lp-container">
 				<div class="lp-section-head">
 					<h2>Frequently asked questions</h2>
-					<p>Quick answers about Strida and how we handle your data and subscription.</p>
+					<p>Quick answers about coaching, reminders, and flexibility.</p>
 				</div>
 				<div class="lp-faq-list">
-					{#each faqs as faq, index}
+					{#each faqs as faq, index (faq.question)}
 						<div class="lp-faq-item">
 							<button
 								type="button"
@@ -478,14 +442,13 @@
 				<div class="lp-quote-inner">
 					<div>
 						<h2 id="quote-heading" class="lp-quote-text">
-							When you make it easy to show up, the small wins stack faster than you expect.
+							When you make restarting easy, consistency follows.
 						</h2>
 						<p class="lp-quote-sub">
-							Strida is for anyone who’s tired of all-or-nothing streaks—and wants a system that still
-							feels human.
+							Start with one habit. Make it doable. Track reality. Adjust with insight — and keep going.
 						</p>
 						<div class="lp-quote-cta">
-							<a href="/register" class="lp-btn-pill lp-btn-pill--light">Join now</a>
+							<a href="/register" class="lp-btn-pill lp-btn-pill--light">Start free</a>
 						</div>
 					</div>
 					<div class="lp-quote-img">
@@ -516,7 +479,8 @@
 				<div class="lp-footer-col">
 					<h3>Product</h3>
 					<ul>
-						<li><a href="#features">Features</a></li>
+						<li><a href="#how">How it works</a></li>
+						<li><a href="#ai">AI insights</a></li>
 						<li><a href="#pricing">Pricing</a></li>
 						<li><a href="/login">Login</a></li>
 						<li><a href="/register">Sign up</a></li>

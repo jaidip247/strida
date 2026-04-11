@@ -9,6 +9,7 @@
 		ChevronsRight,
 		Plus,
 		Settings,
+		Sparkles,
 		User
 	} from '@lucide/svelte';
 	import { page } from '$app/stores';
@@ -18,19 +19,33 @@
 
 	let { data, children } = $props();
 
-	const navItems = [
+	const allNavItems = [
 		{ href: '/app', icon: Calendar, label: 'Today', exact: true },
 		{ href: '/app/add', icon: Plus, label: 'Add Habit' },
-		{ href: '/app/progress', icon: BarChart, label: 'Progress' },
-		{ href: '/app/insights', icon: Brain, label: 'Insights' },
+		{ href: '/app/progress', icon: BarChart, label: 'Progress', paidOnly: true },
+		{ href: '/app/insights', icon: Brain, label: 'Insights', paidOnly: true },
 		{ href: '/app/notifications', icon: Bell, label: 'Notifications', notify: true, mobileShort: 'Alerts' },
 		{ href: '/app/settings', icon: Settings, label: 'Settings' }
 	];
 
-	const mobileNavItems = [
-		...navItems,
-		{ href: '/app/profile', icon: User, label: 'Profile' }
-	];
+	const plan = $derived(data.plan === 'paid' ? 'paid' : 'free');
+
+	const navItems = $derived(
+		plan === 'paid'
+			? allNavItems
+			: [
+					...allNavItems.filter((i) => !i.paidOnly),
+					{
+						href: '/app/upgrade',
+						icon: Sparkles,
+						label: 'Upgrade',
+						exact: false,
+						mobileShort: 'Pro'
+					}
+				]
+	);
+
+	const mobileNavItems = $derived([...navItems, { href: '/app/profile', icon: User, label: 'Profile' }]);
 
 	const user = $derived(data.session?.user);
 	const sidebarEmail = $derived(user?.email ?? '');
